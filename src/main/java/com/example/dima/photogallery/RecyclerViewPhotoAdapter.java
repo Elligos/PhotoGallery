@@ -1,6 +1,7 @@
 package com.example.dima.photogallery;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -39,6 +40,8 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
         GalleryItem galleryItem = mGalleryItems.get(position);
         Drawable placeHolder = mParentContext.getResources().getDrawable(R.drawable.temp_image);
         holder.bindDrawable(placeHolder);
+        holder.bindGalleryItem(galleryItem);
+        holder.bindParentContext(mParentContext);
         mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());
     }
 
@@ -48,15 +51,34 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
     }
 }
 
-class PhotoHolder extends RecyclerView.ViewHolder{
+class PhotoHolder extends RecyclerView.ViewHolder
+                    implements View.OnClickListener
+{
     private ImageView mItemImageView;
+    private GalleryItem mGalleryItem;
+    private Context mParentContext;
 
     public PhotoHolder(View itemView){
         super(itemView);
         mItemImageView = (ImageView) itemView;
+        mItemImageView.setOnClickListener(this);
     }
 
     public void bindDrawable(Drawable drawable){
         mItemImageView.setImageDrawable(drawable);
+    }
+
+    public void bindGalleryItem(GalleryItem galleryItem) {
+        mGalleryItem = galleryItem;
+    }
+
+    public void bindParentContext(Context parentContext) {
+        mParentContext = parentContext;
+    }
+
+    @Override
+    public void onClick(View v) {
+        Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
+        mParentContext.startActivity(i);
     }
 }
