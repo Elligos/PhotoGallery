@@ -78,7 +78,8 @@ class PhotoHolder extends RecyclerView.ViewHolder
 
     @Override
     public void onClick(View v) {
-        Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
+//        Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
+        Intent i = PhotoPageActivity.newIntent(mParentContext, mGalleryItem.getPhotoPageUri());
         mParentContext.startActivity(i);
     }
 }
