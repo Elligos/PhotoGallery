@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Web;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
+
+import com.example.dima.photogallery.Web.FlickrFetchr;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,15 +21,18 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     private static final String TAG = "ThumbnailDownloader";
     private static final int MESSAGE_DOWNLOAD = 0;
 
-    private Handler mRequestHandler;
-    private ConcurrentMap<T, String> mRequestMap = new ConcurrentHashMap<>();
-    private Handler mResponseHandler;
+    private Handler mRequestHandler;//обработчик текущего потока ThumbnailDownloader
+    private ConcurrentMap<T, String> mRequestMap = new ConcurrentHashMap<>();//хранит объекты,
+                                                                //+ связанные с запросами
+
+    private Handler mResponseHandler;//обработчик потока, создавшего ThumbnailDownloader
     private ThumbnailDownloadListener<T> mThumbnailDownloadListener;
 
+    //интерфейс для обработки загруженного изображения после завершения загрузки
     public interface ThumbnailDownloadListener<T>{
         void onThumbnailDownloaded(T target, Bitmap thumbnail);
     }
-
+    //назначить слушателя, ответственного за обработку загруженного изображения
     public void setThumbnailDownloadListener(ThumbnailDownloadListener<T> listener){
         mThumbnailDownloadListener = listener;
     }
@@ -37,6 +42,8 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         mResponseHandler = responseHandler;
     }
 
+    //реализация обработчика запросов
+    // (метод вызывается до того, как Looper впервые проверит очередь)
     @Override
     protected void onLooperPrepared() {
         mRequestHandler = new Handler(){
@@ -51,6 +58,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         };
     }
 
+    //обработать запрос из очереди
     private void handleRequest(final T target) {
         try {
             final String url = mRequestMap.get(target);
@@ -76,6 +84,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         }
     }
 
+    //добавить в очередь запрос на загрузку по url-адресу для объекта Т
     public void queueThumbnail(T target, String url) {
         Log.i(TAG, "Got a URL: " + url);
 
@@ -88,7 +97,11 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         }
     }
 
+    //очистить очередь загрузки
     public void clearQueue(){
         mResponseHandler.removeMessages(MESSAGE_DOWNLOAD);
     }
 }
+
+
+

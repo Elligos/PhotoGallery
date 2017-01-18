@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".PhotoGalleryActivity">
+        <activity android:name=".Activities.PhotoGallery.PhotoGalleryActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -28,19 +28,19 @@
         </activity>
 
         <activity
-            android:name=".PhotoPageActivity"
+            android:name=".Activities.PhotoPage.PhotoPageActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"/>
 
-        <service android:name=".PollService"/>
+        <service android:name=".Services.PollService"/>
 
-        <receiver android:name=".StartupReceiver">
+        <receiver android:name=".Receivers.StartupReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
 
         <receiver
-            android:name=".NotificationReceiver"
+            android:name=".Receivers.NotificationReceiver"
             android:exported="false">
             <intent-filter
                 android:priority="-999">

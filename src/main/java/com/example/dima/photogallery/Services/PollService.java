@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Services;
 
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -11,8 +11,12 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.os.SystemClock;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationManagerCompat;
 import android.util.Log;
+
+import com.example.dima.photogallery.Activities.PhotoGallery.GalleryItem;
+import com.example.dima.photogallery.Activities.PhotoGallery.PhotoGalleryActivity;
+import com.example.dima.photogallery.Web.FlickrFetchr;
+import com.example.dima.photogallery.R;
 
 import java.util.List;
 
@@ -22,7 +26,7 @@ import java.util.List;
 
 public class PollService extends IntentService{
     private static final String TAG = "PollService";
-    private static final int POLL_INTERVAL_mS = 1000 * 60;
+    private static final int POLL_INTERVAL_mS = 1000 * 60;//интервал отправления сигналов
     public static final String ACTION_SHOW_NOTIFICATION =
                                                 "com.example.dima.photogallery.SHOW_NOTIFICATION";
     public static final String PERM_PRIVATE =
@@ -34,6 +38,7 @@ public class PollService extends IntentService{
         return new Intent(context, PollService.class);
     }
 
+    //настроить автоматическую отправку сигналов
     public static void setServiceAlarm(Context context, boolean isOn) {
         Intent i = PollService.newIntent(context);
         PendingIntent pi = PendingIntent.getService(context, 0, i, 0);
@@ -55,16 +60,18 @@ public class PollService extends IntentService{
         super(TAG);
     }
 
-
+    //обработчик сигналов
     @Override
     protected void onHandleIntent(Intent intent) {
+        //выйти, если сеть недоступна
         if(!isNetworkAvailableAndConnected()){
             return;
         }
         Log.i(TAG, "Received an intent: " + intent);
-        String query = QueryPreferences.getStoredQuery(this);
-        String lastResultId = QueryPreferences.getLastResultId(this);
-        List<GalleryItem> items;
+        String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
+        String lastResultId = QueryPreferences.getLastResultId(this);//получить идентификатор результата
+                                                                //+ последнего потскового запроса
+        List<GalleryItem> items;//модели
 
         if (query == null) {
             items = new FlickrFetchr().fetchRecentPhotos();
@@ -75,7 +82,8 @@ public class PollService extends IntentService{
         if (items.size() == 0) {
             return;
         }
-
+        //если идентификатор модели самой недавней фотографии отличается от того, который был в
+        //+ предыдущем поисковом запросе, запустить процедуру уведомления пользователя
         String  resultId = items.get(0).getId();
         if(resultId.equals(lastResultId)){
             Log.i(TAG, "Got an old result: " + resultId);
@@ -86,11 +94,13 @@ public class PollService extends IntentService{
         QueryPreferences.setLastResultId(this, resultId);
     }
 
+    //запустить процедуру уведомления пользователя
     private void notifyUser(){
         Resources resources = getResources();
         Intent i = PhotoGalleryActivity.newIntent(this);
         PendingIntent pi = PendingIntent.getActivity(this, 0, i, 0);
 
+        //сформировать уведомление
         Notification notification = new NotificationCompat.Builder(this)
                 .setTicker(resources.getString(R.string.new_pictures_title))
                 .setSmallIcon(android.R.drawable.ic_menu_report_image)
@@ -102,17 +112,20 @@ public class PollService extends IntentService{
 //        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
 //        notificationManager.notify(0, notification);
 //        sendBroadcast(new Intent(ACTION_SHOW_NOTIFICATION));
-        showBackgroundNotification(0, notification);
+        showBackgroundNotification(0, notification);//отправить запрос на уведомление
     }
 
+    //отправить запрос на уведомление
     private void showBackgroundNotification(int requestCode,
                                             Notification notification) {
         Intent i = new Intent(ACTION_SHOW_NOTIFICATION);
         i.putExtra(REQUEST_CODE, requestCode);
         i.putExtra(NOTIFICATION, notification);
+        //отправить упорядоченный широковещательный интент
         sendOrderedBroadcast(i, PERM_PRIVATE, null, null, Activity.RESULT_OK, null, null);
     }
 
+    //проверить, доступна ли сеть
     private boolean isNetworkAvailableAndConnected(){
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
 
@@ -122,6 +135,7 @@ public class PollService extends IntentService{
         return  (isNetworkAvailable && isNetworkConnected);
     }
 
+    //проверить, включен ли сигнал
     public static boolean isServiceAlarmOn(Context context){
         Intent i = PollService.newIntent(context);
         PendingIntent pi = PendingIntent.getService(context, 0, i, PendingIntent.FLAG_NO_CREATE);

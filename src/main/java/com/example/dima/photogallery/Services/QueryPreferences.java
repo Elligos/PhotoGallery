@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Services;
 
 import android.content.Context;
 import android.preference.PreferenceManager;
@@ -6,7 +6,7 @@ import android.preference.PreferenceManager;
 /**
  * Created by Dima on 12.11.2016.
  */
-
+//хранилище общих настроек
 public class QueryPreferences {
     private static final String PREF_SEARCH_QUERY = "SearchQuery";
     private static final String PREF_LAST_RESULT_ID = "lastResultId";

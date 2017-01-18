@@ -1,9 +1,11 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities.PhotoPage;
 
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.support.v4.app.Fragment;
+
+import com.example.dima.photogallery.Activities.SingleFragmentActivity;
 
 /**
  * Created by Dima on 20.11.2016.

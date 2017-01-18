@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -7,12 +7,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.app.Fragment;
 import android.util.Log;
-import android.widget.Toast;
+
+import com.example.dima.photogallery.Services.PollService;
 
 /**
  * Created by Dima on 17.11.2016.
  */
 
+//фрагмент, который отменяет оповещения, если активен
 public class VisibleFragment extends Fragment {
     private static final String TAG = "VisibleFragment";
 
@@ -32,10 +34,6 @@ public class VisibleFragment extends Fragment {
     private BroadcastReceiver mOnShowNotification = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-//            Toast.makeText(getActivity(),
-//                            "Got a broadcast:" + intent.getAction(),
-//                            Toast.LENGTH_LONG)
-//                  .show();
             Log.i(TAG, "cancelling notification");
             setResultCode(Activity.RESULT_CANCELED);
         }

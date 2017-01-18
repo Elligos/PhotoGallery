@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +8,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import com.example.dima.photogallery.Activities.PhotoPage.PhotoPageActivity;
+import com.example.dima.photogallery.R;
+import com.example.dima.photogallery.Web.ThumbnailDownloader;
 
 import java.util.List;
 
@@ -23,8 +27,8 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
 
     public RecyclerViewPhotoAdapter(List<GalleryItem> galleryItems,
                                     ThumbnailDownloader<PhotoHolder> downloader){
-        mGalleryItems = galleryItems;
-        mThumbnailDownloader = downloader;
+        mGalleryItems = galleryItems;//передать модели, по которым будет проводиться загрузка фото
+        mThumbnailDownloader = downloader;//передать загрузчик
     }
 
     @Override
@@ -42,7 +46,8 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
         holder.bindDrawable(placeHolder);
         holder.bindGalleryItem(galleryItem);
         holder.bindParentContext(mParentContext);
-        mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());
+        mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());//запустить загрузку
+                                //+ фотографии
     }
 
     @Override
@@ -76,6 +81,7 @@ class PhotoHolder extends RecyclerView.ViewHolder
         mParentContext = parentContext;
     }
 
+    //при нажатии на изображение, открыть страницу этого изображения
     @Override
     public void onClick(View v) {
 //        Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());

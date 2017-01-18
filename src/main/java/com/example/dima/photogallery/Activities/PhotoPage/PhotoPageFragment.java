@@ -1,4 +1,4 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities.PhotoPage;
 
 import android.net.Uri;
 import android.os.Bundle;
@@ -11,6 +11,9 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
+
+import com.example.dima.photogallery.R;
+import com.example.dima.photogallery.Activities.VisibleFragment;
 
 /**
  * Created by Dima on 20.11.2016.

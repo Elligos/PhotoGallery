@@ -1,16 +1,16 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.net.Uri;
 
 /**
  * Created by Dima on 06.11.2016.
  */
-
+//класс модели, описывающей фотографию на фотохостинге Flickr
 public class GalleryItem {
-    private String mCaption;
-    private String mId;
-    private String mUrl;
-    private String mOwner;
+    private String mCaption;//заголовок фото
+    private String mId;//идентификатор
+    private String mUrl;//адрес фото для загрузки
+    private String mOwner;//идентификатор пользователя, которому принадлежит фото
 
     public String getOwner() {
         return mOwner;
@@ -44,6 +44,7 @@ public class GalleryItem {
         mUrl = url;
     }
 
+    //построить URL страницы фотографии
     public Uri getPhotoPageUri() {
         return Uri.parse("http://www.flickr.com/photos/")
                 .buildUpon()

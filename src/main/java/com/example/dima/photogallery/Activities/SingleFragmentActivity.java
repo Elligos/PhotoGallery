@@ -1,9 +1,11 @@
-package com.example.dima.photogallery;
+package com.example.dima.photogallery.Activities;
 
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
+
+import com.example.dima.photogallery.R;
 
 /**
  * Created by Dima on 07.09.2016.
