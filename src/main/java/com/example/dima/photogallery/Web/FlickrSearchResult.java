@@ -11,6 +11,7 @@ import java.util.List;
 //результат поискового запроса
 public class FlickrSearchResult {
     List<GalleryItem> mItems = new ArrayList<>();
+    String mOriginalJsonString = null;
     int page = 0;
     int pagesAmount = 0;
 
@@ -18,6 +19,14 @@ public class FlickrSearchResult {
     {
         mItems.clear();
         mItems.addAll(items);
+    }
+
+    public String getOriginalJsonString() {
+        return mOriginalJsonString;
+    }
+
+    public void setOriginalJsonString(String originalJsonString) {
+        mOriginalJsonString = originalJsonString;
     }
 
     public List<GalleryItem> getGalleryItems()

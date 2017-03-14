@@ -17,6 +17,7 @@ import com.example.dima.photogallery.Activities.PhotoGallery.GalleryItem;
 import com.example.dima.photogallery.Activities.PhotoGallery.PhotoGalleryActivity;
 import com.example.dima.photogallery.Web.FlickrFetchr;
 import com.example.dima.photogallery.R;
+import com.example.dima.photogallery.Web.FlickrSearchResult;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ public class PollService extends IntentService{
                                          "com.example.dima.photogallery.PRIVATE";
     public static final String REQUEST_CODE = "REQUEST_CODE";
     public static final String NOTIFICATION = "NOTIFICATION";
+    public static final int RECENT_PAGE = 1;
 
     public static Intent newIntent(Context context) {
         return new Intent(context, PollService.class);
@@ -72,13 +74,18 @@ public class PollService extends IntentService{
         String lastResultId = QueryPreferences.getLastResultId(this);//получить идентификатор результата
                                                                 //+ последнего потскового запроса
         List<GalleryItem> items;//модели
+        FlickrSearchResult result;//
 
         if (query == null) {
-            items = new FlickrFetchr().fetchRecentPhotos();
+            result = new FlickrFetchr().fetchRecentPhotosFromPage(RECENT_PAGE);
         }
         else{
-            items = new FlickrFetchr().searchPhotos(query);
+            result = new FlickrFetchr().searchPhotosInPage(query, RECENT_PAGE);
         }
+        if(result == null){
+            return;
+        }
+        items = result.getGalleryItems();
         if (items.size() == 0) {
             return;
         }
