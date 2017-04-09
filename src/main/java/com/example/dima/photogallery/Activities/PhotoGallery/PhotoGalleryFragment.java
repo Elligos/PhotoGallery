@@ -1,6 +1,7 @@
 package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -20,6 +21,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.example.dima.photogallery.Activities.Settings.SettingsActivity;
 import com.example.dima.photogallery.Web.FlickrFetchr;
 import com.example.dima.photogallery.Services.PollService;
 import com.example.dima.photogallery.Services.QueryPreferences;
@@ -41,12 +43,17 @@ public class PhotoGalleryFragment extends VisibleFragment
 
     private int SPAN_COUNT = 3;//количество столбцов
     private RecyclerView mPhotoRecyclerView;
+    private RecyclerViewPhotoAdapter mAdapter;
     private List<GalleryItem> mItems;// = new ArrayList<>();//список моделей, описывающих фотографии
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с сайта Flickr
 
     private int mCurrentPage = -1;//выбранная страница с фотографиями, которую отображает фрагмент
     private int mPagesAmount = 1;//общее количество страниц с фотографиями
     private Callbacks mCallbacks;//интерфейс обратного вызова
+
+
+
+    private String mQuery;
 
     public interface Callbacks{
         void setCurrentPhotoPage(int currentPage);
@@ -72,13 +79,23 @@ public class PhotoGalleryFragment extends VisibleFragment
         return pageFragment;
     }
 
+    //создать новый фрагмент
+    public static PhotoGalleryFragment newInstance(ThumbnailDownloader<PhotoHolder> downloader,
+                                                   int currentPage,
+                                                   String query)
+    {
+        PhotoGalleryFragment pageFragment = new PhotoGalleryFragment();
+        pageFragment.setCurrentPage(currentPage);
+        pageFragment.setThumbnailDownloader(downloader);
+        pageFragment.setQuery(query);
+        Log.i(TAG, "Fragment(page: " + currentPage + ") instantiated.");
+        return pageFragment;
+    }
+
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         mCallbacks = (Callbacks) context;//получить функции обратного вызова активности-хоста
-//        mItems = mCallbacks.getItems();
-//        mCurrentPage = mCallbacks.getCurrentPage();
-//        mThumbnailDownloader = mCallbacks.getDownloader();
         Log.i(TAG, "Photo gallery (page  " + mCurrentPage + ") attached.");
     }
 
@@ -113,7 +130,7 @@ public class PhotoGalleryFragment extends VisibleFragment
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), SPAN_COUNT));
-        updateItems();//обновить модели
+        new FetchItemTask().execute();//обновить
         Log.i(TAG, "Photo gallery fragment view: " + this.getTag() + " (page " + mCurrentPage + ") created.");
         return v;
     }
@@ -197,6 +214,10 @@ public class PhotoGalleryFragment extends VisibleFragment
                 PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
                 getActivity().invalidateOptionsMenu();
                 return true;
+            case R.id.menu_item_settings:
+                Intent i = new Intent(getContext(), SettingsActivity.class);
+                startActivity(i);
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -210,13 +231,29 @@ public class PhotoGalleryFragment extends VisibleFragment
 //                                                //+ запрос, если имеется, либо null
         //new FetchItemTask(query).execute();//обновить
         Log.i(TAG, "updateItems() in page " + mCurrentPage + ") called.");
-        setupAdapter();
+//        setupAdapter();
+        new FetchItemTask().execute();//обновить
     }
 
 
     //настроить адаптер для RecyclerView
     private void setupAdapter() {
         Log.i(TAG, "setupAdapter() in page " + mCurrentPage + ") called.");
+//        //если фрагмент подключен к активности, настроить адаптер для набора данных mPhotoRecyclerView
+//        if (isAdded()) {
+//            if((mItems == null) || (mThumbnailDownloader == null)){
+//                if(mItems == null){
+//                    Log.i(TAG, "mItems == NULL in page " + mCurrentPage + ") called.");
+//                }
+//                if(mThumbnailDownloader == null){
+//                    Log.i(TAG, "mThumbnailDownloader == NULL in page " + mCurrentPage + ") called.");
+//                }
+//                mPhotoRecyclerView.setAdapter(new RecyclerViewDumbAdapter());
+//            }
+//            else {
+//                mPhotoRecyclerView.setAdapter(new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader));
+//            }
+//        }
         //если фрагмент подключен к активности, настроить адаптер для набора данных mPhotoRecyclerView
         if (isAdded()) {
             if((mItems == null) || (mThumbnailDownloader == null)){
@@ -226,7 +263,6 @@ public class PhotoGalleryFragment extends VisibleFragment
                 if(mThumbnailDownloader == null){
                     Log.i(TAG, "mThumbnailDownloader == NULL in page " + mCurrentPage + ") called.");
                 }
-                mPhotoRecyclerView.setAdapter(new RecyclerViewDumbAdapter());
             }
             else {
                 mPhotoRecyclerView.setAdapter(new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader));
@@ -266,5 +302,37 @@ public class PhotoGalleryFragment extends VisibleFragment
 
     public void setItems(List<GalleryItem> items) {
         mItems = items;
+    }
+
+    public void setQuery(String query) {
+        mQuery = query;
+    }
+
+    //запустить задачу по загрузке и обновлению моделей
+    //+ Если поисковый запрос задан, будут загружены модели, соответствующие запросу.
+    //+ Если поисковый запрос не задан, будут загружены модели, соответствующие последним добавленным
+    //+ фотографиям.
+    private class FetchItemTask extends AsyncTask<Void, Void, FlickrSearchResult> {
+        private static final String TAG = "PhotoGalleryFragment";
+
+        public FetchItemTask(){
+        }
+
+        @Override
+        protected FlickrSearchResult doInBackground(Void... params) {
+            if(mQuery == null){
+                return new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
+            } else{
+                return new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
+            }
+        }
+
+        @Override
+        protected void onPostExecute(FlickrSearchResult result) {
+            mPagesAmount = result.getPagesAmount();
+            mItems = result.getGalleryItems();
+            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader);
+            mPhotoRecyclerView.setAdapter(mAdapter);
+        }
     }
 }

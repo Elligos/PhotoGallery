@@ -6,4 +6,12 @@
     <string name="stop_polling">Stop polling</string>
     <string name="new_pictures_title">New PhotoGallery Pictures</string>
     <string name="new_pictures_text">You have new pitures in PhotoGalery.</string>
+    <string name="amount_of_photos_in_page_string">Amount of photos in page</string>
+    <string name="amount_of_photos_in_row_string">Amount of photos in row</string>
+    <string name="title_activity_settings">SettingsActivity</string>
+    <string name="action_settings">Settings</string>
+    <string name="polling_enabled_string">Polling enabled</string>
+    <string name="network_settings_string">NETWORK SETTINGS</string>
+    <string name="gallery_view_settings_stirng">GALLERY VIEW SETTINGS</string>
+    <string name="menu_settings_string">Settings</string>
 </resources>

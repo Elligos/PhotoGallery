@@ -175,34 +175,34 @@ public class FlickrFetchr {
     public byte[] getUrlBytes(String urlSpec) throws IOException{
         final int BUFFER_SIZE = 1024;
         URL url = new URL(urlSpec);
-        Log.i(TAG, "openConnection(): start");
+//        Log.i(TAG, "openConnection(): start");
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();//подключиться к
         // ресурсу, указанному в URL
-        Log.i(TAG, "openConnection(): stop");
+//        Log.i(TAG, "openConnection(): stop");
         try{
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            Log.i(TAG, "getInputStream(): start");
+//            Log.i(TAG, "getInputStream(): start");
             InputStream in = connection.getInputStream();
-            Log.i(TAG, "getInputStream(): stop");
+//            Log.i(TAG, "getInputStream(): stop");
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new IOException(connection.getResponseMessage() + ": with " + urlSpec);
             }
 
             int bytesRead = 0;
             byte [] buffer = new byte[BUFFER_SIZE];
-            Log.i(TAG, "reading bytes: start");
+//            Log.i(TAG, "reading bytes: start");
             while ((bytesRead = in.read(buffer)) > 0) {
                 out.write(buffer, 0, bytesRead);
             }
-            Log.i(TAG, "reading bytes: stop");
+//            Log.i(TAG, "reading bytes: stop");
             out.flush();
             out.close();
             return out.toByteArray();
         }
         finally {
-            Log.i(TAG, "disconnect(): start");
+//            Log.i(TAG, "disconnect(): start");
             connection.disconnect();
-            Log.i(TAG, "disconnect(): stop");
+//            Log.i(TAG, "disconnect(): stop");
         }
     }
 

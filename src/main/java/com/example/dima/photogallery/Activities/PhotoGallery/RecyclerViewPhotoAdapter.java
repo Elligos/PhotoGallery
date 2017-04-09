@@ -41,13 +41,20 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
 
     @Override
     public void onBindViewHolder(PhotoHolder holder, int position) {
-        GalleryItem galleryItem = mGalleryItems.get(position);
+
         Drawable placeHolder = mParentContext.getResources().getDrawable(R.drawable.temp_image);
         holder.bindDrawable(placeHolder);
-        holder.bindGalleryItem(galleryItem);
         holder.bindParentContext(mParentContext);
+        if(mGalleryItems == null){
+            return;
+        }
+        GalleryItem galleryItem = mGalleryItems.get(position);
+        if (galleryItem == null) {
+            return;
+        }
+        holder.bindGalleryItem(galleryItem);
         mThumbnailDownloader.queueThumbnail(holder, galleryItem.getUrl());//запустить загрузку
-                                //+ фотографии
+        //+ фотографии
     }
 
     @Override

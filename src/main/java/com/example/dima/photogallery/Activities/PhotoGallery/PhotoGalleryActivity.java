@@ -30,7 +30,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     private static final String LAST_JSON_STRING = "LAST_JSON_STRING";
     private static final String CURRENT_PAGE = "CURRENT_PAGE";
     private static final String PAGES_AMOUNT = "PAGES_AMOUNT";
-    private static final String JSON_SEARCH_RESULTS = "JSON_SEARCH_RESULTS";
     private static final String FRAGMENT_KEYS = "FRAGMENT_KEYS";
     private static final String TAG = "PhotoGallery";
     private static final String UNIQUE_POSTFIX = "com.example.dima.photogallery";
@@ -47,57 +46,17 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        ArrayList<String> storedFragmentsKeys;
-
         startPhotoDownloaderThread();
-        String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
+
         if (savedInstanceState == null) {
             mCurrentPage = 1;
-            new PhotoGalleryActivity.FetchItemsTask(query).execute();//обновить
+            String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
+            new FetchItemTask(query).execute();
             super.onCreate(savedInstanceState);
         }
         else {
             super.onCreate(savedInstanceState);
-            mCurrentPage = savedInstanceState.getInt(CURRENT_PAGE, 1);
-            mPagesAmount = savedInstanceState.getInt(PAGES_AMOUNT, 1);
-            storedFragmentsKeys = savedInstanceState.getStringArrayList(FRAGMENT_KEYS);
-            ArrayList<String> jsonSearchResults = savedInstanceState.getStringArrayList(JSON_SEARCH_RESULTS);
-            mSearchResults = new ArrayList<>();
-
-            for (String jsonSearchResult : jsonSearchResults) {
-                FlickrSearchResult result = new FlickrSearchResult();
-                try {
-                    FlickrFetchr.parseItems(result, jsonSearchResult);
-                    mSearchResults.add(result);
-                }
-                catch (IOException|JSONException e){
-                    mSearchResults.clear();
-                    mCurrentPage = 1;
-                    new PhotoGalleryActivity.FetchItemsTask(query).execute();//обновить
-                    break;
-                }
-            }
-            if (storedFragmentsKeys != null) {
-                PhotoGalleryFragment storedFragment;
-                int fragmentPage;
-                for (String fragmentKey : storedFragmentsKeys) {
-                    try {
-                        storedFragment = (PhotoGalleryFragment) getSupportFragmentManager().getFragment(savedInstanceState, fragmentKey);
-                    }
-                    catch(Exception e){
-                        storedFragment = null;
-                        Log.i(TAG, "Exception on restoring fragment (key " + fragmentKey + " )");
-                    }
-                    if(storedFragment != null){
-                        fragmentPage = savedInstanceState.getShort(fragmentKey+ UNIQUE_POSTFIX, (short) 1);
-                        storedFragment.setCurrentPage(fragmentPage);
-                        storedFragment.setItems(mSearchResults.get(fragmentPage-1).getGalleryItems());
-                        storedFragment.setThumbnailDownloader(mThumbnailDownloader);
-                        Log.i(TAG, "State of page " + fragmentPage + " ( " + storedFragment.getTag() + " ) " + " restored.");
-                    }
-                }
-            }
-            loadAdapter();
+            restoreApplicationState(savedInstanceState);
         }
         Log.i(TAG, "PhotoGalleryActivity created");
     }
@@ -121,6 +80,39 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " created.");
     }
 
+    protected void restoreApplicationState(@Nullable Bundle savedInstanceState)
+    {
+        ArrayList<String> storedFragmentsKeys;
+
+        mCurrentPage = savedInstanceState.getInt(CURRENT_PAGE, 1);
+        mPagesAmount = savedInstanceState.getInt(PAGES_AMOUNT, 1);
+        storedFragmentsKeys = savedInstanceState.getStringArrayList(FRAGMENT_KEYS);
+        String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
+        mSearchResults = new ArrayList<>();
+
+        if (storedFragmentsKeys != null) {
+            PhotoGalleryFragment storedFragment;
+            int fragmentPage;
+            for (String fragmentKey : storedFragmentsKeys) {
+                try {
+                    storedFragment = (PhotoGalleryFragment) getSupportFragmentManager().getFragment(savedInstanceState, fragmentKey);
+                }
+                catch(Exception e){
+                    storedFragment = null;
+                    Log.i(TAG, "Exception on restoring fragment (key " + fragmentKey + " )");
+                }
+                if(storedFragment != null){
+                    fragmentPage = savedInstanceState.getShort(fragmentKey+ UNIQUE_POSTFIX, (short) 1);
+                    storedFragment.setCurrentPage(fragmentPage);
+                    storedFragment.setThumbnailDownloader(mThumbnailDownloader);
+                    storedFragment.setQuery(query);
+                    Log.i(TAG, "State of page " + fragmentPage + " ( " + storedFragment.getTag() + " ) " + " restored.");
+                }
+            }
+        }
+        loadAdapter();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -134,12 +126,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         String jsonString = FlickrFetchr.getLastSearchedJsonString();
         outState.putString(LAST_JSON_STRING, jsonString);
         outState.putInt(CURRENT_PAGE, mCurrentPage);
-        outState.putInt(PAGES_AMOUNT, mSearchResults.size());
-        ArrayList<String> jsonSearchStrings = new ArrayList<>();
-        for(int i = 0; i < mSearchResults.size(); i++){
-            jsonSearchStrings.add(mSearchResults.get(i).getOriginalJsonString());
-            outState.putStringArrayList(JSON_SEARCH_RESULTS, jsonSearchStrings);
-        }
+        outState.putInt(PAGES_AMOUNT, mPagesAmount);
 
         ArrayList<String> fragmentKeys = new ArrayList<>();
         String fragmentKey;
@@ -161,7 +148,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
             }
         }
         outState.putStringArrayList(FRAGMENT_KEYS, fragmentKeys);
-
     }
 
     //получить фрагмент, соответствующий выбранной позиции
@@ -170,10 +156,8 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         PhotoGalleryFragment fragment;
         int pageToSet = position+1;
 
-        fragment = PhotoGalleryFragment.newInstance(
-                                            mSearchResults.get(position).getGalleryItems(),
-                                            mThumbnailDownloader,
-                                            pageToSet );
+        String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый
+        fragment = PhotoGalleryFragment.newInstance(mThumbnailDownloader, pageToSet, query );
         fragment.updateItems();
         return fragment;
     }
@@ -188,7 +172,8 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     public void reloadPages() {
         mCurrentPage = 1;
         String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый
-        new PhotoGalleryActivity.FetchItemsTask(query).execute();//обновить
+//        new PhotoGalleryActivity.FetchItemsTask(query).execute();//обновить
+        new FetchItemTask(query).execute();//обновить
     }
 
     @Override
