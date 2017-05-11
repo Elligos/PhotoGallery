@@ -14,6 +14,7 @@ import android.util.Log;
 
 import com.example.dima.photogallery.Activities.ViewPagerActivity;
 import com.example.dima.photogallery.Services.QueryPreferences;
+import com.example.dima.photogallery.Settings.PhotoGallerySettings;
 import com.example.dima.photogallery.Web.FlickrFetchr;
 import com.example.dima.photogallery.Web.FlickrSearchResult;
 import com.example.dima.photogallery.Web.ThumbnailDownloader;
@@ -38,27 +39,29 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с сайта Flickr
     private List<GalleryItem> mItems;//список моделей, описывающих фотографии
     private List<FlickrSearchResult> mSearchResults;
+    private PhotoGallerySettings mSettings;
 
     public static Intent newIntent(Context context) {
         return new Intent(context, PhotoGalleryActivity.class);
     }
 
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         startPhotoDownloaderThread();
-
+        mSettings = PhotoGallerySettings.getPhotoGallerySettings(this.getApplicationContext());
         if (savedInstanceState == null) {
             mCurrentPage = 1;
             String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
             new FetchItemTask(query).execute();
             super.onCreate(savedInstanceState);
+            Log.i(TAG, "PhotoGalleryActivity created.");
         }
         else {
             super.onCreate(savedInstanceState);
             restoreApplicationState(savedInstanceState);
+            Log.i(TAG, "PhotoGalleryActivity restored.");
         }
-        Log.i(TAG, "PhotoGalleryActivity created");
+
     }
 
     //старт потока, где будет идти загрузка фотографий
@@ -80,6 +83,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " created.");
     }
 
+    //восстановить состояние активности
     protected void restoreApplicationState(@Nullable Bundle savedInstanceState)
     {
         ArrayList<String> storedFragmentsKeys;
@@ -117,9 +121,23 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     protected void onDestroy() {
         super.onDestroy();
         mThumbnailDownloader.quit();
-        Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + "destroyed");
+        Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " destroyed");
     }
 
+    @Override
+    protected void onPause() {
+        mThumbnailDownloader.clearQueue();
+        Log.i(TAG, "Photo gallery activity paused");
+//        mThumbnailDownloader.quit();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    //сохранить состояние активности
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
@@ -157,8 +175,8 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         int pageToSet = position+1;
 
         String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый
-        fragment = PhotoGalleryFragment.newInstance(mThumbnailDownloader, pageToSet, query );
-        fragment.updateItems();
+        fragment = PhotoGalleryFragment.newInstance(mThumbnailDownloader, mSettings, pageToSet, query);
+//        fragment.updateItems();
         return fragment;
     }
 
@@ -180,8 +198,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     public void onSaveFragment(Bundle outState, Fragment fragment) {
         ArrayList<String> fragmentKeys;
         String fragmentKey;
-
-
 
         if(outState.get(FRAGMENT_KEYS) == null) {
             fragmentKeys = new ArrayList<>();

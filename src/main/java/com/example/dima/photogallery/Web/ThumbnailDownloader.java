@@ -51,7 +51,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             public void handleMessage(Message msg) {
                 if (msg.what == MESSAGE_DOWNLOAD) {
                     T target = (T) msg.obj;
-                    Log.i(TAG, "Got a request for URL: " + mRequestMap.get(target));
+                    Log.i(TAG, "Thread "+ getId() + " got a request for URL: " + mRequestMap.get(target));
                     handleRequest(target);
                 }
             }
@@ -86,14 +86,14 @@ public class ThumbnailDownloader<T> extends HandlerThread {
 
     //добавить в очередь запрос на загрузку по url-адресу для объекта Т
     public void queueThumbnail(T target, String url) {
-        Log.i(TAG, "Got a URL: " + url);
+//        Log.i(TAG, "Got a URL: " + url);
 
         if(url == null){
             mRequestMap.remove(target);
         } else{
-            mRequestMap.put(target, url);
-            mRequestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)
-                            .sendToTarget();
+                mRequestMap.put(target, url);
+                mRequestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)
+                        .sendToTarget();
         }
     }
 

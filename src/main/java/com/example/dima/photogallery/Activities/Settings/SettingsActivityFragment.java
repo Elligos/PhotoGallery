@@ -1,5 +1,7 @@
 package com.example.dima.photogallery.Activities.Settings;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
@@ -35,6 +37,8 @@ public class SettingsActivityFragment extends Fragment {
         mPhotoGallerySettings = PhotoGallerySettings.getPhotoGallerySettings(getContext());
 //        setHasOptionsMenu(true);//зарегистрировать фрагмент для получения обратных вызовов меню
         //+ (фрагмент должен получить вызов onCreateOptionsMenu(…))
+        Intent data = new Intent();
+        ((Activity) (getContext())).setResult(Activity.RESULT_OK, data);
     }
 
     @Override

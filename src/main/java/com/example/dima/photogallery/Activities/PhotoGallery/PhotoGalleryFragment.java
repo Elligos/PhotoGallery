@@ -1,13 +1,10 @@
 package com.example.dima.photogallery.Activities.PhotoGallery;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
@@ -22,6 +19,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.dima.photogallery.Activities.Settings.SettingsActivity;
+import com.example.dima.photogallery.Settings.PhotoGallerySettings;
 import com.example.dima.photogallery.Web.FlickrFetchr;
 import com.example.dima.photogallery.Services.PollService;
 import com.example.dima.photogallery.Services.QueryPreferences;
@@ -30,7 +28,6 @@ import com.example.dima.photogallery.Web.FlickrSearchResult;
 import com.example.dima.photogallery.Web.ThumbnailDownloader;
 import com.example.dima.photogallery.Activities.VisibleFragment;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -40,19 +37,18 @@ import java.util.List;
 public class PhotoGalleryFragment extends VisibleFragment
 {
     private static final String TAG = "PhotoGalleryFragment";
+    private static final int SETTINGS_ACTIVITY_REQUEST_CODE = 0x77;
 
-    private int SPAN_COUNT = 3;//количество столбцов
+    private int mSpanCount = 2;//количество столбцов
     private RecyclerView mPhotoRecyclerView;
     private RecyclerViewPhotoAdapter mAdapter;
     private List<GalleryItem> mItems;// = new ArrayList<>();//список моделей, описывающих фотографии
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с сайта Flickr
+    PhotoGallerySettings mSettings;//настройки приложения
 
     private int mCurrentPage = -1;//выбранная страница с фотографиями, которую отображает фрагмент
     private int mPagesAmount = 1;//общее количество страниц с фотографиями
     private Callbacks mCallbacks;//интерфейс обратного вызова
-
-
-
     private String mQuery;
 
     public interface Callbacks{
@@ -92,6 +88,21 @@ public class PhotoGalleryFragment extends VisibleFragment
         return pageFragment;
     }
 
+    //создать новый фрагмент
+    public static PhotoGalleryFragment newInstance(ThumbnailDownloader<PhotoHolder> downloader,
+                                                   PhotoGallerySettings settings,
+                                                   int currentPage,
+                                                   String query)
+    {
+        PhotoGalleryFragment pageFragment = new PhotoGalleryFragment();
+        pageFragment.setCurrentPage(currentPage);
+        pageFragment.setThumbnailDownloader(downloader);
+        pageFragment.setSettings(settings);
+        pageFragment.setQuery(query);
+        Log.i(TAG, "Fragment(page: " + currentPage + ") instantiated.");
+        return pageFragment;
+    }
+
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
@@ -114,6 +125,8 @@ public class PhotoGalleryFragment extends VisibleFragment
         PollService.setServiceAlarm(getActivity(), true);//запустить службу на проверку наличия
                                         //+ новых фотографий в хостинге Flickr
         Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") created.");
+        mSettings = PhotoGallerySettings.getPhotoGallerySettings(getContext());
+        mSpanCount = mSettings.getAmountOfPhotosInRow();
     }
 
     @Override
@@ -129,7 +142,7 @@ public class PhotoGalleryFragment extends VisibleFragment
                              @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), SPAN_COUNT));
+        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), mSpanCount));
         new FetchItemTask().execute();//обновить
         Log.i(TAG, "Photo gallery fragment view: " + this.getTag() + " (page " + mCurrentPage + ") created.");
         return v;
@@ -216,14 +229,26 @@ public class PhotoGalleryFragment extends VisibleFragment
                 return true;
             case R.id.menu_item_settings:
                 Intent i = new Intent(getContext(), SettingsActivity.class);
-                startActivity(i);
+                startActivityForResult(i, SETTINGS_ACTIVITY_REQUEST_CODE);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch(requestCode){
+            case SETTINGS_ACTIVITY_REQUEST_CODE:
+                Intent refresh = new Intent(getContext(), PhotoGalleryActivity.class);
+                startActivity(refresh);
+                ((Activity) getContext()).finish();
+                break;
+            default:
+                break;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 
     //обновить модели
     public void updateItems(){
@@ -231,43 +256,7 @@ public class PhotoGalleryFragment extends VisibleFragment
 //                                                //+ запрос, если имеется, либо null
         //new FetchItemTask(query).execute();//обновить
         Log.i(TAG, "updateItems() in page " + mCurrentPage + ") called.");
-//        setupAdapter();
         new FetchItemTask().execute();//обновить
-    }
-
-
-    //настроить адаптер для RecyclerView
-    private void setupAdapter() {
-        Log.i(TAG, "setupAdapter() in page " + mCurrentPage + ") called.");
-//        //если фрагмент подключен к активности, настроить адаптер для набора данных mPhotoRecyclerView
-//        if (isAdded()) {
-//            if((mItems == null) || (mThumbnailDownloader == null)){
-//                if(mItems == null){
-//                    Log.i(TAG, "mItems == NULL in page " + mCurrentPage + ") called.");
-//                }
-//                if(mThumbnailDownloader == null){
-//                    Log.i(TAG, "mThumbnailDownloader == NULL in page " + mCurrentPage + ") called.");
-//                }
-//                mPhotoRecyclerView.setAdapter(new RecyclerViewDumbAdapter());
-//            }
-//            else {
-//                mPhotoRecyclerView.setAdapter(new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader));
-//            }
-//        }
-        //если фрагмент подключен к активности, настроить адаптер для набора данных mPhotoRecyclerView
-        if (isAdded()) {
-            if((mItems == null) || (mThumbnailDownloader == null)){
-                if(mItems == null){
-                    Log.i(TAG, "mItems == NULL in page " + mCurrentPage + ") called.");
-                }
-                if(mThumbnailDownloader == null){
-                    Log.i(TAG, "mThumbnailDownloader == NULL in page " + mCurrentPage + ") called.");
-                }
-            }
-            else {
-                mPhotoRecyclerView.setAdapter(new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader));
-            }
-        }
     }
 
     //получить загрузчик фотографий
@@ -308,6 +297,10 @@ public class PhotoGalleryFragment extends VisibleFragment
         mQuery = query;
     }
 
+    public void setSettings(PhotoGallerySettings settings) {
+        mSettings = settings;
+    }
+
     //запустить задачу по загрузке и обновлению моделей
     //+ Если поисковый запрос задан, будут загружены модели, соответствующие запросу.
     //+ Если поисковый запрос не задан, будут загружены модели, соответствующие последним добавленным
@@ -329,6 +322,7 @@ public class PhotoGalleryFragment extends VisibleFragment
 
         @Override
         protected void onPostExecute(FlickrSearchResult result) {
+            Log.i(TAG, "onPostExecute() (page  " + mCurrentPage + ") called.");
             mPagesAmount = result.getPagesAmount();
             mItems = result.getGalleryItems();
             mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader);
