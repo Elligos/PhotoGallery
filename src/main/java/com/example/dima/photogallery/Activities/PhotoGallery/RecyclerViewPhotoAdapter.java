@@ -2,11 +2,14 @@ package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.graphics.drawable.Drawable;
 import android.support.v7.widget.RecyclerView;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.ImageView;
 
 import com.example.dima.photogallery.Activities.PhotoPage.PhotoPageActivity;
@@ -24,11 +27,20 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
     private List<GalleryItem> mGalleryItems;
     private Context mParentContext;
     ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;
+    private int mImageHeight;
 
     public RecyclerViewPhotoAdapter(List<GalleryItem> galleryItems,
                                     ThumbnailDownloader<PhotoHolder> downloader){
         mGalleryItems = galleryItems;//передать модели, по которым будет проводиться загрузка фото
         mThumbnailDownloader = downloader;//передать загрузчик
+    }
+
+    public RecyclerViewPhotoAdapter(List<GalleryItem> galleryItems,
+                                    ThumbnailDownloader<PhotoHolder> downloader,
+                                    int imageHeight){
+        mGalleryItems = galleryItems;//передать модели, по которым будет проводиться загрузка фото
+        mThumbnailDownloader = downloader;//передать загрузчик
+        mImageHeight = imageHeight;
     }
 
     @Override
@@ -41,6 +53,9 @@ public class RecyclerViewPhotoAdapter extends RecyclerView.Adapter<PhotoHolder>{
 
     @Override
     public void onBindViewHolder(PhotoHolder holder, int position) {
+        ViewGroup.LayoutParams params = holder.itemView.getLayoutParams();
+        params.height = mImageHeight;
+        holder.itemView.setLayoutParams(params);
 
         Drawable placeHolder = mParentContext.getResources().getDrawable(R.drawable.temp_image);
         holder.bindDrawable(placeHolder);
@@ -69,6 +84,7 @@ class PhotoHolder extends RecyclerView.ViewHolder
     private ImageView mItemImageView;
     private GalleryItem mGalleryItem;
     private Context mParentContext;
+    private int mImageHeight;
 
     public PhotoHolder(View itemView){
         super(itemView);
@@ -86,6 +102,10 @@ class PhotoHolder extends RecyclerView.ViewHolder
 
     public void bindParentContext(Context parentContext) {
         mParentContext = parentContext;
+    }
+
+    public void bindImageHeight(int imageHeight) {
+        mImageHeight = imageHeight;
     }
 
     //при нажатии на изображение, открыть страницу этого изображения

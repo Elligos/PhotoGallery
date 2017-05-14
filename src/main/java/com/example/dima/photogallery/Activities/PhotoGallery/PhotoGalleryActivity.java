@@ -10,9 +10,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.WindowManager;
 
 import com.example.dima.photogallery.Activities.ViewPagerActivity;
+import com.example.dima.photogallery.Services.PollService;
 import com.example.dima.photogallery.Services.QueryPreferences;
 import com.example.dima.photogallery.Settings.PhotoGallerySettings;
 import com.example.dima.photogallery.Web.FlickrFetchr;
@@ -47,8 +50,16 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        WindowManager wm = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE); // the results will be higher than using the activity context object or the getWindowManager() shortcut
+        wm.getDefaultDisplay().getMetrics(displayMetrics);
+        int screenWidth = displayMetrics.widthPixels;
+        int screenHeight = displayMetrics.heightPixels;
+        Log.i(TAG, "Screen width = "+ screenWidth+";  Screen height = "+screenHeight+";");
         startPhotoDownloaderThread();
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(this.getApplicationContext());
+        PollService.setServiceAlarm(this, mSettings.isPollingEnabled());//запустить службу на проверку наличия
+        //+ новых фотографий в хостинге Flickr
         if (savedInstanceState == null) {
             mCurrentPage = 1;
             String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос

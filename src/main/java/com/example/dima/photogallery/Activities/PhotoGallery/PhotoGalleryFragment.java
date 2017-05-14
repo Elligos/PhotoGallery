@@ -3,6 +3,7 @@ package com.example.dima.photogallery.Activities.PhotoGallery;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -10,6 +11,7 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -17,6 +19,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import com.example.dima.photogallery.Activities.Settings.SettingsActivity;
 import com.example.dima.photogallery.Settings.PhotoGallerySettings;
@@ -40,6 +43,7 @@ public class PhotoGalleryFragment extends VisibleFragment
     private static final int SETTINGS_ACTIVITY_REQUEST_CODE = 0x77;
 
     private int mSpanCount = 2;//количество столбцов
+    private int mImageHeight;
     private RecyclerView mPhotoRecyclerView;
     private RecyclerViewPhotoAdapter mAdapter;
     private List<GalleryItem> mItems;// = new ArrayList<>();//список моделей, описывающих фотографии
@@ -122,11 +126,37 @@ public class PhotoGalleryFragment extends VisibleFragment
 //        setRetainInstance(true);//сохранять текущий фрагмент между изменениями конфигурации
         setHasOptionsMenu(true);//зарегистрировать фрагмент для получения обратных вызовов меню
                         //+ (фрагмент должен получить вызов onCreateOptionsMenu(…))
-        PollService.setServiceAlarm(getActivity(), true);//запустить службу на проверку наличия
-                                        //+ новых фотографий в хостинге Flickr
+//        PollService.setServiceAlarm(getActivity(), true);//запустить службу на проверку наличия
+//                                        //+ новых фотографий в хостинге Flickr
         Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") created.");
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(getContext());
         mSpanCount = mSettings.getAmountOfPhotosInRow();
+
+        mImageHeight = calculateImageHeight();
+    }
+
+    private int calculateImageHeight(){
+        int orientation;
+        int screenWidth;
+        int screenHeight;
+        int imageWidth;
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        WindowManager windowManager  =  (WindowManager) getContext().
+                getApplicationContext().
+                getSystemService(Context.WINDOW_SERVICE);
+
+        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
+        screenWidth = displayMetrics.widthPixels;
+        screenHeight = displayMetrics.heightPixels;
+        orientation = getContext().getResources().getConfiguration().orientation;
+        if(orientation == Configuration.ORIENTATION_LANDSCAPE){
+            imageWidth = screenHeight/mSpanCount;
+        }
+        else{
+            imageWidth = screenWidth/mSpanCount;
+        }
+        Log.i(TAG, "imageHeight=" + (imageWidth*3)/4 + "; imageWidth="+imageWidth+";");
+        return  (imageWidth*3)/4;
     }
 
     @Override
@@ -139,7 +169,11 @@ public class PhotoGalleryFragment extends VisibleFragment
     @Override
     public View onCreateView(LayoutInflater inflater,
                              @Nullable ViewGroup container,
-                             @Nullable Bundle savedInstanceState) {
+                             @Nullable Bundle savedInstanceState)
+    {
+
+
+
         View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), mSpanCount));
@@ -147,6 +181,8 @@ public class PhotoGalleryFragment extends VisibleFragment
         Log.i(TAG, "Photo gallery fragment view: " + this.getTag() + " (page " + mCurrentPage + ") created.");
         return v;
     }
+
+
 
     @Override
     public void onDestroyView() {
@@ -164,20 +200,19 @@ public class PhotoGalleryFragment extends VisibleFragment
         final SearchView searchView = (SearchView) searchItem.getActionView();//получить интерфейс
                                         //+ для управления текстовым полем
 
-        //вывести на панель, включена ли служба опроса
-        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
-        if (PollService.isServiceAlarmOn(getActivity())) {
-            toggleItem.setTitle(R.string.stop_polling);
-        } else {
-            toggleItem.setTitle(R.string.start_polling);
-        }
+//        //вывести на панель, включена ли служба опроса
+//        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
+//        if (PollService.isServiceAlarmOn(getActivity())) {
+//            toggleItem.setTitle(R.string.stop_polling);
+//        } else {
+//            toggleItem.setTitle(R.string.start_polling);
+//        }
         //назначить слушателя для поля поиска
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 Log.d(TAG, "QueryTextSubmit: " + query);
                 QueryPreferences.setStoredQuery(getActivity(), query);
-                //updateItems();
                 mCallbacks.reloadPages();
                 return true;
             }
@@ -221,12 +256,12 @@ public class PhotoGalleryFragment extends VisibleFragment
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 updateItems();
                 return true;
-            //вкл/выкл службу опроса
-            case R.id.menu_item_toggle_polling:
-                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
-                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
-                getActivity().invalidateOptionsMenu();
-                return true;
+//            //вкл/выкл службу опроса
+//            case R.id.menu_item_toggle_polling:
+//                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+//                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
+//                getActivity().invalidateOptionsMenu();
+//                return true;
             case R.id.menu_item_settings:
                 Intent i = new Intent(getContext(), SettingsActivity.class);
                 startActivityForResult(i, SETTINGS_ACTIVITY_REQUEST_CODE);
@@ -325,7 +360,8 @@ public class PhotoGalleryFragment extends VisibleFragment
             Log.i(TAG, "onPostExecute() (page  " + mCurrentPage + ") called.");
             mPagesAmount = result.getPagesAmount();
             mItems = result.getGalleryItems();
-            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader);
+//            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader);
+            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader, mImageHeight);
             mPhotoRecyclerView.setAdapter(mAdapter);
         }
     }
