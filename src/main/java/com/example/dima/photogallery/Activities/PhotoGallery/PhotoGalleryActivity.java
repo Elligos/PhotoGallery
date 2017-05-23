@@ -10,11 +10,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import com.example.dima.photogallery.Activities.ViewPagerActivity;
+import com.example.dima.photogallery.R;
 import com.example.dima.photogallery.Services.PollService;
 import com.example.dima.photogallery.Services.QueryPreferences;
 import com.example.dima.photogallery.Settings.PhotoGallerySettings;
@@ -44,6 +52,10 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     private List<FlickrSearchResult> mSearchResults;
     private PhotoGallerySettings mSettings;
 
+    private ListView drawerList;
+    private DrawerLayout mDrawerLayout;
+    ActionBarDrawerToggle mDrawerToggle;
+
     public static Intent newIntent(Context context) {
         return new Intent(context, PhotoGalleryActivity.class);
     }
@@ -56,6 +68,9 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         int screenWidth = displayMetrics.widthPixels;
         int screenHeight = displayMetrics.heightPixels;
         Log.i(TAG, "Screen width = "+ screenWidth+";  Screen height = "+screenHeight+";");
+
+
+
         startPhotoDownloaderThread();
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(this.getApplicationContext());
         PollService.setServiceAlarm(this, mSettings.isPollingEnabled());//запустить службу на проверку наличия
@@ -73,6 +88,30 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
             Log.i(TAG, "PhotoGalleryActivity restored.");
         }
 
+
+//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+//        setSupportActionBar(toolbar);
+        String [] titles = {"Search", "Cancel"};
+        drawerList = (ListView)findViewById(R.id.drawer);
+        drawerList.setAdapter(new ArrayAdapter<String>(getSupportActionBar().getThemedContext(),
+                android.R.layout.simple_list_item_activated_1/*R.layout.drawer_list_item*/, titles));
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,/*toolbar,*/
+                R.string.open_drawer, R.string.close_drawer) {
+            // Вызывается при переходе выдвижной панели в полностью закрытое состояние.
+            @Override
+            public void onDrawerClosed(View view) {
+                super.onDrawerClosed(view);//Код, выполняемый при закрытии выдвижной панели
+            }
+            //Вызывается при переходе выдвижной панели в полностью открытое состояние.
+            @Override
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);//Код, выполняемый при открытии выдвижной панели
+            }
+        };
+        mDrawerLayout.addDrawerListener(mDrawerToggle);
+        getSupportActionBar().setHomeButtonEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
 
     //старт потока, где будет идти загрузка фотографий
@@ -126,6 +165,20 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
             }
         }
         loadAdapter();
+    }
+
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -201,7 +254,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     public void reloadPages() {
         mCurrentPage = 1;
         String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый
-//        new PhotoGalleryActivity.FetchItemsTask(query).execute();//обновить
         new FetchItemTask(query).execute();//обновить
     }
 
@@ -288,41 +340,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         protected void onPostExecute(FlickrSearchResult result) {
             mPagesAmount = result.getPagesAmount();
             mItems = result.getGalleryItems();
-            loadAdapter();
-        }
-    }
-
-    //запустить задачу по загрузке и обновлению моделей
-    //+ Если поисковый запрос задан, будут загружены модели, соответствующие запросу.
-    //+ Если поисковый запрос не задан, будут загружены модели, соответствующие последним добавленным
-    //+ фотографиям.
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<FlickrSearchResult>> {
-        private static final String TAG = "PhotoGalleryFragment";
-        private String mQuery;
-
-        public FetchItemsTask(String query){
-            mQuery = query;
-        }
-
-        @Override
-        protected List<FlickrSearchResult> doInBackground(Void... params) {
-            if(mQuery == null){
-                return new FlickrFetchr().fetchRecentPhotos();
-            } else{
-                return new FlickrFetchr().searchPhotos(mQuery);
-            }
-        }
-
-        @Override
-        protected void onPostExecute(List<FlickrSearchResult> result) {
-            mSearchResults = result;
-            if(mSearchResults == null){
-                return;
-            }
-            if((mCurrentPage == 0) || (mCurrentPage > mSearchResults.size())){
-                mCurrentPage = 1;//TODO: throw exception? or remain fail-safe style?
-            }
-            mPagesAmount = mSearchResults.size();
             loadAdapter();
         }
     }

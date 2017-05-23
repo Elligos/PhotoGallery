@@ -14,4 +14,6 @@
     <string name="network_settings_string">NETWORK SETTINGS</string>
     <string name="gallery_view_settings_stirng">GALLERY VIEW SETTINGS</string>
     <string name="menu_settings_string">Settings</string>
+    <string name="open_drawer">Open drawer</string>
+    <string name="close_drawer">Close drawer</string>
 </resources>

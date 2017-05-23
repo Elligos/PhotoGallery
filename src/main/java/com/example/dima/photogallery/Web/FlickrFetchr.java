@@ -39,7 +39,7 @@ public class FlickrFetchr {
                                             .appendQueryParameter("extras", "url_s")
                                             .build();
 
-
+    private int mPhotosPerPage = 20;
 
     @Nullable
     public List<FlickrSearchResult> fetchRecentPhotos(){
@@ -80,6 +80,9 @@ public class FlickrFetchr {
     }
 
 
+    public void setPhotosPerPageAmount(int photosPerPage) {
+        mPhotosPerPage = photosPerPage;
+    }
 
 
     //вернуть резудьтат поиска недавних фотографий с соответствующей страницы
@@ -92,7 +95,9 @@ public class FlickrFetchr {
     // страницы
     private String buildUrl(String method, String query, int page){
         Uri.Builder uriBuilder = ENDPOINT.buildUpon()
+                .appendQueryParameter("per_page", String.valueOf(mPhotosPerPage))
                 .appendQueryParameter("method", method);
+
         if(method.equals(SEARCH_METHOD)){
             uriBuilder.appendQueryParameter("text", query);
         }

@@ -126,8 +126,6 @@ public class PhotoGalleryFragment extends VisibleFragment
 //        setRetainInstance(true);//сохранять текущий фрагмент между изменениями конфигурации
         setHasOptionsMenu(true);//зарегистрировать фрагмент для получения обратных вызовов меню
                         //+ (фрагмент должен получить вызов onCreateOptionsMenu(…))
-//        PollService.setServiceAlarm(getActivity(), true);//запустить службу на проверку наличия
-//                                        //+ новых фотографий в хостинге Flickr
         Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") created.");
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(getContext());
         mSpanCount = mSettings.getAmountOfPhotosInRow();
@@ -199,20 +197,16 @@ public class PhotoGalleryFragment extends VisibleFragment
                                         //+ созданный инструмент поиска
         final SearchView searchView = (SearchView) searchItem.getActionView();//получить интерфейс
                                         //+ для управления текстовым полем
-
-//        //вывести на панель, включена ли служба опроса
-//        MenuItem toggleItem = menu.findItem(R.id.menu_item_toggle_polling);
-//        if (PollService.isServiceAlarmOn(getActivity())) {
-//            toggleItem.setTitle(R.string.stop_polling);
-//        } else {
-//            toggleItem.setTitle(R.string.start_polling);
-//        }
         //назначить слушателя для поля поиска
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 Log.d(TAG, "QueryTextSubmit: " + query);
                 QueryPreferences.setStoredQuery(getActivity(), query);
+                //свернуть поле поиска
+                searchView.setQuery("", false);
+                searchView.setIconified(true);
+                //загрузить изображения и обновить страницу
                 mCallbacks.reloadPages();
                 return true;
             }
@@ -224,7 +218,6 @@ public class PhotoGalleryFragment extends VisibleFragment
                 return false;
             }
         });
-
         //заполнить текстовое поле поиска сохраненным запросом, когда пользователь нажимает кнопку
         //+ поиска для открытия SearchView.
         searchView.setOnSearchClickListener(new View.OnClickListener() {
@@ -234,7 +227,6 @@ public class PhotoGalleryFragment extends VisibleFragment
                 searchView.setQuery(query, false);
             }
         });
-
     }
 
 
@@ -254,14 +246,9 @@ public class PhotoGalleryFragment extends VisibleFragment
             //стереть сохраненный запрос
             case R.id.menu_item_clear:
                 QueryPreferences.setStoredQuery(getActivity(), null);
-                updateItems();
+                mCallbacks.reloadPages();
+//                updateItems();
                 return true;
-//            //вкл/выкл службу опроса
-//            case R.id.menu_item_toggle_polling:
-//                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
-//                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
-//                getActivity().invalidateOptionsMenu();
-//                return true;
             case R.id.menu_item_settings:
                 Intent i = new Intent(getContext(), SettingsActivity.class);
                 startActivityForResult(i, SETTINGS_ACTIVITY_REQUEST_CODE);
@@ -287,9 +274,6 @@ public class PhotoGalleryFragment extends VisibleFragment
 
     //обновить модели
     public void updateItems(){
-//        String query = QueryPreferences.getStoredQuery(getActivity());//получить последний поисковый
-//                                                //+ запрос, если имеется, либо null
-        //new FetchItemTask(query).execute();//обновить
         Log.i(TAG, "updateItems() in page " + mCurrentPage + ") called.");
         new FetchItemTask().execute();//обновить
     }
@@ -348,10 +332,15 @@ public class PhotoGalleryFragment extends VisibleFragment
 
         @Override
         protected FlickrSearchResult doInBackground(Void... params) {
+            FlickrFetchr fetcher = new FlickrFetchr();
+            int photosPerPage = mSettings.getAmountOfPhotosInPage();
+            fetcher.setPhotosPerPageAmount(photosPerPage);
             if(mQuery == null){
-                return new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
+                return fetcher.fetchRecentPhotosFromPage(mCurrentPage);
+//                return new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
             } else{
-                return new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
+                return fetcher.searchPhotosInPage(mQuery, mCurrentPage);
+//                return new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
             }
         }
 
@@ -360,7 +349,6 @@ public class PhotoGalleryFragment extends VisibleFragment
             Log.i(TAG, "onPostExecute() (page  " + mCurrentPage + ") called.");
             mPagesAmount = result.getPagesAmount();
             mItems = result.getGalleryItems();
-//            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader);
             mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader, mImageHeight);
             mPhotoRecyclerView.setAdapter(mAdapter);
         }

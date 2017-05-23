@@ -1,7 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v4.view.ViewPager
+<android.support.v4.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:id="@+id/view_pager_activity">
-</android.support.v4.view.ViewPager>
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:id="@+id/content_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <android.support.v4.view.ViewPager
+            android:id="@+id/view_pager_activity"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+        </android.support.v4.view.ViewPager>
+        <!--<android.support.v7.widget.Toolbar-->
+            <!--xmlns:app="http://schemas.android.com/apk/res-auto"-->
+            <!--android:id="@+id/toolbar"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="?attr/actionBarSize"-->
+            <!--android:background="?attr/colorPrimary"-->
+            <!--app:popupTheme="@style/AppTheme.PopupOverlay"/>-->
+    </FrameLayout>
+
+    <ListView
+        android:id="@+id/drawer"
+        android:orientation="vertical"
+        android:layout_width="240dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="#D5976B"
+        android:choiceMode="singleChoice"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"/>
+         <!--<android.support.v7.widget.SearchView-->
+
+             <!--android:id="@+id/drawer_search"-->
+             <!--android:title="@string/search"-->
+             <!--android:layout_height="20dp"-->
+             <!--android:layout_width="180dp"/>-->
+    <!--</ListView>-->
+</android.support.v4.widget.DrawerLayout>
