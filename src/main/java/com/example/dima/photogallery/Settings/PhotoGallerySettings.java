@@ -17,6 +17,9 @@ public class PhotoGallerySettings {
     final String POLLING_ENABLED = "POLLING_ENABLED";
     final String PHOTOS_IN_PAGE = "PHOTOS_IN_PAGE";
     final String PHOTOS_IN_ROW = "PHOTOS_IN_ROW";
+    final boolean DEFAULT_POLLING_STATE = true;
+    final int DEFAULT_PHOTOS_IN_PAGE_AMOUNT = 20;
+    final int DEFAULT_PHOTOS_IN_ROW_AMOUNT = 2;
     private boolean mPollingEnabled;
     private int mAmountOfPhotosInPage;
     private int mAmountOfPhotosInRow;
@@ -40,12 +43,10 @@ public class PhotoGallerySettings {
     }
 
     public PhotoGallerySettings(Context context) {
-//        mSettings = context.getSharedPreferences(PHOTO_GALLERY_SHARED_PREFERENCES,
-//                                                 Context.MODE_PRIVATE);
         mSettings = PreferenceManager.getDefaultSharedPreferences(context);
-        mPollingEnabled = mSettings.getBoolean(POLLING_ENABLED, true);
-        mAmountOfPhotosInPage = mSettings.getInt(PHOTOS_IN_PAGE, 100);
-        mAmountOfPhotosInRow = mSettings.getInt(PHOTOS_IN_ROW, 2);
+        mPollingEnabled = mSettings.getBoolean(POLLING_ENABLED, DEFAULT_POLLING_STATE);
+        mAmountOfPhotosInPage = mSettings.getInt(PHOTOS_IN_PAGE, DEFAULT_PHOTOS_IN_PAGE_AMOUNT);
+        mAmountOfPhotosInRow = mSettings.getInt(PHOTOS_IN_ROW, DEFAULT_PHOTOS_IN_ROW_AMOUNT);
     }
 
     public void saveAmountOfPhotosInPage(int amountOfPhotosInPage){

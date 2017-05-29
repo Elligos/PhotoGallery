@@ -23,10 +23,6 @@ public class RecyclerViewDumbAdapter extends RecyclerView.Adapter<DumbHolder>{
 
     private Context mParentContext;
 
-    public RecyclerViewDumbAdapter(){
-
-    }
-
     @Override
     public DumbHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         mParentContext = parent.getContext();

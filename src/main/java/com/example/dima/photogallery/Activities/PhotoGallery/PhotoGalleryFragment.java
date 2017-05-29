@@ -56,40 +56,7 @@ public class PhotoGalleryFragment extends VisibleFragment
     private String mQuery;
 
     public interface Callbacks{
-        void setCurrentPhotoPage(int currentPage);
-        void setPhotoPagesAmount(int pagesAmount);
         void reloadPages();
-        void onSaveFragment(Bundle outState, Fragment fragment);
-        List<GalleryItem> getItems();
-        List<GalleryItem> getItemsForPage(int page);
-        ThumbnailDownloader<PhotoHolder> getDownloader();
-        int getCurrentPage();
-    }
-
-    //создать новый фрагмент
-    public static PhotoGalleryFragment newInstance(List<GalleryItem> items,
-                                                   ThumbnailDownloader<PhotoHolder> downloader,
-                                                   int currentPage)
-    {
-        PhotoGalleryFragment pageFragment = new PhotoGalleryFragment();
-        pageFragment.setItems(items);
-        pageFragment.setCurrentPage(currentPage);
-        pageFragment.setThumbnailDownloader(downloader);
-        Log.i(TAG, "Fragment(page: " + currentPage + ") instantiated.");
-        return pageFragment;
-    }
-
-    //создать новый фрагмент
-    public static PhotoGalleryFragment newInstance(ThumbnailDownloader<PhotoHolder> downloader,
-                                                   int currentPage,
-                                                   String query)
-    {
-        PhotoGalleryFragment pageFragment = new PhotoGalleryFragment();
-        pageFragment.setCurrentPage(currentPage);
-        pageFragment.setThumbnailDownloader(downloader);
-        pageFragment.setQuery(query);
-        Log.i(TAG, "Fragment(page: " + currentPage + ") instantiated.");
-        return pageFragment;
     }
 
     //создать новый фрагмент
@@ -123,7 +90,6 @@ public class PhotoGalleryFragment extends VisibleFragment
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setRetainInstance(true);//сохранять текущий фрагмент между изменениями конфигурации
         setHasOptionsMenu(true);//зарегистрировать фрагмент для получения обратных вызовов меню
                         //+ (фрагмент должен получить вызов onCreateOptionsMenu(…))
         Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") created.");
@@ -247,7 +213,6 @@ public class PhotoGalleryFragment extends VisibleFragment
             case R.id.menu_item_clear:
                 QueryPreferences.setStoredQuery(getActivity(), null);
                 mCallbacks.reloadPages();
-//                updateItems();
                 return true;
             case R.id.menu_item_settings:
                 Intent i = new Intent(getContext(), SettingsActivity.class);
@@ -337,10 +302,8 @@ public class PhotoGalleryFragment extends VisibleFragment
             fetcher.setPhotosPerPageAmount(photosPerPage);
             if(mQuery == null){
                 return fetcher.fetchRecentPhotosFromPage(mCurrentPage);
-//                return new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
             } else{
                 return fetcher.searchPhotosInPage(mQuery, mCurrentPage);
-//                return new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
             }
         }
 

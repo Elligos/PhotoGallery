@@ -41,44 +41,6 @@ public class FlickrFetchr {
 
     private int mPhotosPerPage = 20;
 
-    @Nullable
-    public List<FlickrSearchResult> fetchRecentPhotos(){
-        List<FlickrSearchResult> fetchResults = new ArrayList<>();
-        FlickrSearchResult result = fetchRecentPhotosFromPage(1);
-        if (result == null) {
-            return null;
-        }
-        fetchResults.add(result);
-        int pagesAmount = result.getPagesAmount();
-        if(pagesAmount>10){
-            pagesAmount=10;
-        }
-        for(int page = 2; page <= pagesAmount; page++) {
-            result = fetchRecentPhotosFromPage(page);
-            fetchResults.add(result);
-        }
-        return fetchResults;
-    }
-
-    @Nullable
-    public List<FlickrSearchResult> searchPhotos(String query){
-        List<FlickrSearchResult> fetchResults = new ArrayList<>();
-        FlickrSearchResult result = searchPhotosInPage(query, 1);
-        if (result == null) {
-            return null;
-        }
-        fetchResults.add(result);
-        int pagesAmount = result.getPagesAmount();
-        if(pagesAmount>10){
-            pagesAmount=10;
-        }
-        for(int page = 2; page <= pagesAmount; page++) {
-            result = searchPhotosInPage(query, page);
-            fetchResults.add(result);
-        }
-        return fetchResults;
-    }
-
 
     public void setPhotosPerPageAmount(int photosPerPage) {
         mPhotosPerPage = photosPerPage;
@@ -180,34 +142,26 @@ public class FlickrFetchr {
     public byte[] getUrlBytes(String urlSpec) throws IOException{
         final int BUFFER_SIZE = 1024;
         URL url = new URL(urlSpec);
-//        Log.i(TAG, "openConnection(): start");
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();//подключиться к
-        // ресурсу, указанному в URL
-//        Log.i(TAG, "openConnection(): stop");
+                                                                    //+ ресурсу, указанному в URL
         try{
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-//            Log.i(TAG, "getInputStream(): start");
             InputStream in = connection.getInputStream();
-//            Log.i(TAG, "getInputStream(): stop");
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new IOException(connection.getResponseMessage() + ": with " + urlSpec);
             }
 
             int bytesRead = 0;
             byte [] buffer = new byte[BUFFER_SIZE];
-//            Log.i(TAG, "reading bytes: start");
             while ((bytesRead = in.read(buffer)) > 0) {
                 out.write(buffer, 0, bytesRead);
             }
-//            Log.i(TAG, "reading bytes: stop");
             out.flush();
             out.close();
             return out.toByteArray();
         }
         finally {
-//            Log.i(TAG, "disconnect(): start");
             connection.disconnect();
-//            Log.i(TAG, "disconnect(): stop");
         }
     }
 

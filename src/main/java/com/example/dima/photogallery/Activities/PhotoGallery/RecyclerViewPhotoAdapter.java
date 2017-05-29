@@ -84,7 +84,6 @@ class PhotoHolder extends RecyclerView.ViewHolder
     private ImageView mItemImageView;
     private GalleryItem mGalleryItem;
     private Context mParentContext;
-    private int mImageHeight;
 
     public PhotoHolder(View itemView){
         super(itemView);
@@ -104,14 +103,9 @@ class PhotoHolder extends RecyclerView.ViewHolder
         mParentContext = parentContext;
     }
 
-    public void bindImageHeight(int imageHeight) {
-        mImageHeight = imageHeight;
-    }
-
     //при нажатии на изображение, открыть страницу этого изображения
     @Override
     public void onClick(View v) {
-//        Intent i = new Intent(Intent.ACTION_VIEW, mGalleryItem.getPhotoPageUri());
         Intent i = PhotoPageActivity.newIntent(mParentContext, mGalleryItem.getPhotoPageUri());
         mParentContext.startActivity(i);
     }

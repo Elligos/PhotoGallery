@@ -12,12 +12,9 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.widget.Toolbar;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -30,9 +27,6 @@ import com.example.dima.photogallery.Web.FlickrFetchr;
 import com.example.dima.photogallery.Web.FlickrSearchResult;
 import com.example.dima.photogallery.Web.ThumbnailDownloader;
 
-import org.json.JSONException;
-
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,7 +46,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     private List<FlickrSearchResult> mSearchResults;
     private PhotoGallerySettings mSettings;
 
-    private ListView drawerList;
+    private ListView mDrawerList;
     private DrawerLayout mDrawerLayout;
     ActionBarDrawerToggle mDrawerToggle;
 
@@ -62,14 +56,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        WindowManager wm = (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE); // the results will be higher than using the activity context object or the getWindowManager() shortcut
-        wm.getDefaultDisplay().getMetrics(displayMetrics);
-        int screenWidth = displayMetrics.widthPixels;
-        int screenHeight = displayMetrics.heightPixels;
-        Log.i(TAG, "Screen width = "+ screenWidth+";  Screen height = "+screenHeight+";");
-
-
 
         startPhotoDownloaderThread();
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(this.getApplicationContext());
@@ -87,31 +73,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
             restoreApplicationState(savedInstanceState);
             Log.i(TAG, "PhotoGalleryActivity restored.");
         }
-
-
-//        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-//        setSupportActionBar(toolbar);
-        String [] titles = {"Search", "Cancel"};
-        drawerList = (ListView)findViewById(R.id.drawer);
-        drawerList.setAdapter(new ArrayAdapter<String>(getSupportActionBar().getThemedContext(),
-                android.R.layout.simple_list_item_activated_1/*R.layout.drawer_list_item*/, titles));
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,/*toolbar,*/
-                R.string.open_drawer, R.string.close_drawer) {
-            // Вызывается при переходе выдвижной панели в полностью закрытое состояние.
-            @Override
-            public void onDrawerClosed(View view) {
-                super.onDrawerClosed(view);//Код, выполняемый при закрытии выдвижной панели
-            }
-            //Вызывается при переходе выдвижной панели в полностью открытое состояние.
-            @Override
-            public void onDrawerOpened(View drawerView) {
-                super.onDrawerOpened(drawerView);//Код, выполняемый при открытии выдвижной панели
-            }
-        };
-        mDrawerLayout.addDrawerListener(mDrawerToggle);
-        getSupportActionBar().setHomeButtonEnabled(true);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        setupDrawer();
     }
 
     //старт потока, где будет идти загрузка фотографий
@@ -131,6 +93,31 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         mThumbnailDownloader.start();
         mThumbnailDownloader.getLooper();
         Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " created.");
+    }
+
+    protected void setupDrawer()
+    {
+        String [] titles = {"Search", "Cancel"};
+        mDrawerList = (ListView)findViewById(R.id.drawer);
+        mDrawerList.setAdapter(new ArrayAdapter<String>(getSupportActionBar().getThemedContext(),
+                android.R.layout.simple_list_item_activated_1/*R.layout.drawer_list_item*/, titles));
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,/*toolbar,*/
+                R.string.open_drawer, R.string.close_drawer) {
+            // Вызывается при переходе выдвижной панели в полностью закрытое состояние.
+            @Override
+            public void onDrawerClosed(View view) {
+                super.onDrawerClosed(view);//Код, выполняемый при закрытии выдвижной панели
+            }
+            //Вызывается при переходе выдвижной панели в полностью открытое состояние.
+            @Override
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);//Код, выполняемый при открытии выдвижной панели
+            }
+        };
+        mDrawerLayout.addDrawerListener(mDrawerToggle);
+        getSupportActionBar().setHomeButtonEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
     }
 
     //восстановить состояние активности
@@ -192,7 +179,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     protected void onPause() {
         mThumbnailDownloader.clearQueue();
         Log.i(TAG, "Photo gallery activity paused");
-//        mThumbnailDownloader.quit();
         super.onPause();
     }
 
@@ -240,7 +226,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
 
         String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый
         fragment = PhotoGalleryFragment.newInstance(mThumbnailDownloader, mSettings, pageToSet, query);
-//        fragment.updateItems();
         return fragment;
     }
 
@@ -250,6 +235,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         return mPagesAmount;
     }
 
+    //---------------------------------CALLBACKS--------------------------------------------------//
     @Override
     public void reloadPages() {
         mCurrentPage = 1;
@@ -257,56 +243,6 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         new FetchItemTask(query).execute();//обновить
     }
 
-    @Override
-    public void onSaveFragment(Bundle outState, Fragment fragment) {
-        ArrayList<String> fragmentKeys;
-        String fragmentKey;
-
-        if(outState.get(FRAGMENT_KEYS) == null) {
-            fragmentKeys = new ArrayList<>();
-        }
-        else{
-            fragmentKeys = outState.getStringArrayList(FRAGMENT_KEYS);
-        }
-        fragmentKey = "PAGE"+((PhotoGalleryFragment)fragment).getCurrentPage();
-        fragmentKeys.add(fragmentKey);
-        outState.putStringArrayList(FRAGMENT_KEYS, fragmentKeys);
-        outState.putInt(fragmentKey, ((PhotoGalleryFragment)fragment).getCurrentPage());
-        getSupportFragmentManager().putFragment(outState, fragmentKey, fragment);
-    }
-
-    //задать текущую страницу
-    @Override
-    public void setCurrentPhotoPage(int page) {
-        mCurrentPage = page;
-    }
-
-    //задать общее количество страниц
-    @Override
-    public void setPhotoPagesAmount(int amount) {
-        mPagesAmount = amount;
-
-    }
-
-    @Override
-    public List<GalleryItem> getItems() {
-        return mSearchResults.get(mCurrentPage-1).getGalleryItems();
-    }
-
-    @Override
-    public List<GalleryItem> getItemsForPage(int page) {
-        return mSearchResults.get(page-1).getGalleryItems();
-    }
-
-    @Override
-    public ThumbnailDownloader<PhotoHolder> getDownloader() {
-        return mThumbnailDownloader;
-    }
-
-    @Override
-    public int getCurrentPage() {
-        return mCurrentPage;
-    }
 
     //обработка события выбора новой страницы
     @Override
