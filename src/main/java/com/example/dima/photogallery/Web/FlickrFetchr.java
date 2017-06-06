@@ -5,6 +5,8 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.example.dima.photogallery.Activities.PhotoGallery.GalleryItem;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -88,49 +90,38 @@ public class FlickrFetchr {
         return result;
     }
 
+
+
     //бесжалостно расчленить Джейсона, чтобы достать модели для фотографий и сопутствующую информацию
     static public void parseItems(FlickrSearchResult result, String jsonString)
-            throws IOException, JSONException
+            throws JSONException
     {
         List<GalleryItem> items = new ArrayList<>();
-
+        GsonBuilder builder = new GsonBuilder();
+        Gson gson = builder.create();
+        JsonPhotos photos;
+        photos = gson.fromJson(jsonString, JsonPhotos.class);
         result.setOriginalJsonString(jsonString);
         sLastSearchedJsonString = jsonString;
         Log.i(TAG, "Parsed JSON: " + jsonString);
-        JSONObject jsonBody = new JSONObject(jsonString);
-
-        JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
-        JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
-
-        for(int i = 0; i < photoJsonArray.length(); i++) {
-            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+        ArrayList<Photos.Photo> photoArray = (ArrayList< Photos.Photo>) photos.photos.photo;
+        for(int i = 0; i < photoArray.size(); i++) {
+            Photos.Photo photo = photoArray.get(i);
             GalleryItem item = new GalleryItem();
-            item.setId(photoJsonObject.getString("id"));
-            item.setCaption(photoJsonObject.getString("title"));
-            if(!photoJsonObject.has("url_s")){
+            item.setId(photo.id);
+            item.setCaption(photo.title);
+            if(photo.url_s == null){
                 continue;
             }
-            item.setUrl(photoJsonObject.getString("url_s"));
-            item.setOwner(photoJsonObject.getString("owner"));
+            item.setUrl(photo.url_s);
+            item.setOwner(photo.owner);
             items.add(item);
         }
         result.setGalleryItems(items);
-        String pagesField = photosJsonObject.getString("pages");
-        String pageField = photosJsonObject.getString("page");
-        Integer pages = Integer.valueOf(pagesField);
-        Integer page = Integer.valueOf(pageField);
-        if(pages!=null) {
-            result.setPagesAmount(pages);
-        }
-        else{
-            throw new IOException();
-        }
-        if(page!=null) {
-            result.setPage(page);
-        }
-        else{
-            throw new IOException();
-        }
+        Integer pages = photos.photos.pages;
+        Integer page = photos.photos.page;
+        result.setPage(page);
+        result.setPagesAmount(pages);
     }
 
     //получить результат url-запроса в виде строки
