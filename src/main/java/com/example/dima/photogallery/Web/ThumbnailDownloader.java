@@ -31,11 +31,13 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     //интерфейс для обработки загруженного изображения после завершения загрузки
     public interface ThumbnailDownloadListener<T>{
         void onThumbnailDownloaded(T target, Bitmap thumbnail);
+        void onThumbnailDownloadError(T target);
     }
-    //назначить слушателя, ответственного за обработку загруженного изображения
+    //назначить слушателя, ответственного за загрузку и обработку изображения
     public void setThumbnailDownloadListener(ThumbnailDownloadListener<T> listener){
         mThumbnailDownloadListener = listener;
     }
+
 
     public ThumbnailDownloader(Handler responseHandler){
         super(TAG);
@@ -51,7 +53,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             public void handleMessage(Message msg) {
                 if (msg.what == MESSAGE_DOWNLOAD) {
                     T target = (T) msg.obj;
-                    Log.i(TAG, "Thread "+ getId() + " got a request for URL: " + mRequestMap.get(target));
+                    Log.i(TAG, "Thread "+ getId() + " got a request for URL: " + mRequestMap.get(target).replaceFirst("https://farm5.staticflickr.com/",""));
                     handleRequest(target);
                 }
             }
@@ -63,6 +65,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         try {
             final String url = mRequestMap.get(target);
             if (url == null) {
+                Log.i(TAG, "Null url detected");
                 return;
             }
             byte[] bitmapBytes = new FlickrFetchr().getUrlBytes(url);
@@ -72,24 +75,26 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                 @Override
                 public void run() {
                     if (mRequestMap.get(target) != url) {
+                        Log.i(TAG, "Url not coincide");
                         return;
                     }
 
                     mRequestMap.remove(target);
+                    Log.i(TAG, "thumbnail downloaded for URL: " + url.replaceFirst("https://farm5.staticflickr.com/",""));
                     mThumbnailDownloadListener.onThumbnailDownloaded(target, bitmap);
                 }
             });
         } catch (IOException ioe) {
             Log.e(TAG, "Error downloading image", ioe);
+            mThumbnailDownloadListener.onThumbnailDownloadError(target);
         }
     }
 
     //добавить в очередь запрос на загрузку по url-адресу для объекта Т
     public void queueThumbnail(T target, String url) {
-//        Log.i(TAG, "Got a URL: " + url);
-
         if(url == null){
             mRequestMap.remove(target);
+            Log.e(TAG, "Queue target failed for the reason : url == null");
         } else{
                 mRequestMap.put(target, url);
                 mRequestHandler.obtainMessage(MESSAGE_DOWNLOAD, target)

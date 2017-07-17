@@ -5,6 +5,8 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.example.dima.photogallery.Activities.PhotoGallery.GalleryItem;
+//import com.google.common.io.Closer;
+import com.google.common.io.Closer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -50,7 +52,9 @@ public class FlickrFetchr {
 
 
     //вернуть резудьтат поиска недавних фотографий с соответствующей страницы
-    public FlickrSearchResult fetchRecentPhotosFromPage(int page){
+    public FlickrSearchResult fetchRecentPhotosFromPage(int page)
+                            throws IOException,
+                                   JSONException {
         String url = buildUrl(FETCH_RECENTS_METHOD, null, page);
         return executeSearch(url);
     }
@@ -70,13 +74,15 @@ public class FlickrFetchr {
     }
 
     //вернуть резудьтат поискового запроса с соответствующей страницы
-    public FlickrSearchResult searchPhotosInPage(String query, int page){
+    public FlickrSearchResult searchPhotosInPage(String query, int page)
+                       throws IOException,
+                              JSONException {
         String url = buildUrl(SEARCH_METHOD, query, page);
         return executeSearch(url);
     }
 
     //вернуть резудьтат url-запроса
-    public FlickrSearchResult executeSearch(String url){
+    public FlickrSearchResult executeSearch(String url) throws IOException, JSONException {
         FlickrSearchResult result = new FlickrSearchResult();
         try{
             String jsonString = getUrlString(url);
@@ -84,8 +90,10 @@ public class FlickrFetchr {
             parseItems(result, jsonString);
         } catch(JSONException je){
             Log.e(TAG, "Failed to parse JSON", je);
+            throw je;
         } catch(IOException ioe){
             Log.e(TAG, "Failed to fetch items", ioe);
+            throw ioe;
         }
         return result;
     }
@@ -115,6 +123,7 @@ public class FlickrFetchr {
             }
             item.setUrl(photo.url_s);
             item.setOwner(photo.owner);
+            item.setPage(photos.photos.page);
             items.add(item);
         }
         result.setGalleryItems(items);
@@ -134,14 +143,18 @@ public class FlickrFetchr {
         final int BUFFER_SIZE = 1024;
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();//подключиться к
-                                                                    //+ ресурсу, указанному в URL
+        //+ ресурсу, указанному в URL
+        connection.setConnectTimeout(1000);
+        connection.setReadTimeout(1000);
         try{
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            InputStream in = connection.getInputStream();
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new IOException(connection.getResponseMessage() + ": with " + urlSpec);
             }
-
+            InputStream in = connection.getInputStream();
+            if(in == null){
+                throw new IOException(connection.getResponseMessage() + ": getInputStream() for " + urlSpec);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             int bytesRead = 0;
             byte [] buffer = new byte[BUFFER_SIZE];
             while ((bytesRead = in.read(buffer)) > 0) {
@@ -152,7 +165,9 @@ public class FlickrFetchr {
             return out.toByteArray();
         }
         finally {
-            connection.disconnect();
+            if(connection != null){
+                connection.disconnect();
+            }
         }
     }
 

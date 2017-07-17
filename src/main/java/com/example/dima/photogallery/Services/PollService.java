@@ -76,11 +76,15 @@ public class PollService extends IntentService{
         List<GalleryItem> items;//модели
         FlickrSearchResult result;//
 
-        if (query == null) {
-            result = new FlickrFetchr().fetchRecentPhotosFromPage(RECENT_PAGE);
+        try {
+            if (query == null) {
+                result = new FlickrFetchr().fetchRecentPhotosFromPage(RECENT_PAGE);
+            } else {
+                result = new FlickrFetchr().searchPhotosInPage(query, RECENT_PAGE);
+            }
         }
-        else{
-            result = new FlickrFetchr().searchPhotosInPage(query, RECENT_PAGE);
+        catch(Exception e){
+            result = null;
         }
         if(result == null){
             return;
@@ -134,9 +138,11 @@ public class PollService extends IntentService{
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
 
         boolean isNetworkAvailable = cm.getActiveNetworkInfo() != null;
+        if(!isNetworkAvailable) return false;
         boolean isNetworkConnected = cm.getActiveNetworkInfo().isConnected();
-
-        return  (isNetworkAvailable && isNetworkConnected);
+        if(!isNetworkConnected) return false;
+        return true;
+//        return  (isNetworkAvailable && isNetworkConnected);
     }
 
     //проверить, включен ли сигнал

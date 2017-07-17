@@ -11,6 +11,7 @@ public class GalleryItem {
     private String mId;//идентификатор
     private String mUrl;//адрес фото для загрузки
     private String mOwner;//идентификатор пользователя, которому принадлежит фото
+    private int mPage;//страница фотографии
 
     public String getOwner() {
         return mOwner;
@@ -42,6 +43,14 @@ public class GalleryItem {
 
     public void setUrl(String url) {
         mUrl = url;
+    }
+
+    public int getPage() {
+        return mPage;
+    }
+
+    public void setPage(int page) {
+        mPage = page;
     }
 
     //построить URL страницы фотографии

@@ -1,17 +1,20 @@
 package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -30,21 +33,33 @@ import com.example.dima.photogallery.Web.ThumbnailDownloader;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
+
+//import rx.Observable;
+//import rx.Subscriber;
+//import rx.schedulers.Schedulers;
+
 public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActivity*/
         implements PhotoGalleryFragment.Callbacks
 {
     private static final String LAST_JSON_STRING = "LAST_JSON_STRING";
     private static final String CURRENT_PAGE = "CURRENT_PAGE";
     private static final String PAGES_AMOUNT = "PAGES_AMOUNT";
+    private static final String NOT_RESTORE_APPLICATION_STATE = "NOT_RESTORE_APPLICATION_STATE";
     private static final String FRAGMENT_KEYS = "FRAGMENT_KEYS";
     private static final String TAG = "PhotoGallery";
     private static final String UNIQUE_POSTFIX = "com.example.dima.photogallery";
+    private static final String NETWORK_REQUEST_ERRROR_MESSAGE =
+                                                "Please, check your network connection and retry.";
     private int mCurrentPage = 1;//выбранная страница
     private int mPagesAmount = 1;//общее количество страниц
     private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с сайта Flickr
     private List<GalleryItem> mItems;//список моделей, описывающих фотографии
     private List<FlickrSearchResult> mSearchResults;
     private PhotoGallerySettings mSettings;
+    private boolean mNotStoreApplicationState = false;
 
     private ListView mDrawerList;
     private DrawerLayout mDrawerLayout;
@@ -58,13 +73,17 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     protected void onCreate(@Nullable Bundle savedInstanceState) {
 
         startPhotoDownloaderThread();
+        mNotStoreApplicationState = false;
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(this.getApplicationContext());
         PollService.setServiceAlarm(this, mSettings.isPollingEnabled());//запустить службу на проверку наличия
         //+ новых фотографий в хостинге Flickr
         if (savedInstanceState == null) {
             mCurrentPage = 1;
-            String query = QueryPreferences.getStoredQuery(this);//получить последний поисковый запрос
-            new FetchItemTask(query).execute();
+            myObservable
+                    .subscribeOn(Schedulers.newThread())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe( result -> showPhotoPages(result),
+                                v -> handleNetworkRequestError());
             super.onCreate(savedInstanceState);
             Log.i(TAG, "PhotoGalleryActivity created.");
         }
@@ -82,11 +101,18 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
         mThumbnailDownloader.setThumbnailDownloadListener(
-                new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>(){
+                new ThumbnailDownloader.ThumbnailDownloadListener<PhotoHolder>() {
                     @Override
-                    public void onThumbnailDownloaded(PhotoHolder holder, Bitmap thumbnail) {
-                        Drawable drawable = new BitmapDrawable(getResources(), thumbnail);
-                        holder.bindDrawable(drawable);
+                    public void onThumbnailDownloaded(PhotoHolder photoHolder,
+                                                      Bitmap bitmap) {
+                        Drawable drawable = new BitmapDrawable(getResources(),
+                                bitmap);
+                        photoHolder.bindDrawable(drawable);
+                    }
+
+                    @Override
+                    public void onThumbnailDownloadError(PhotoHolder target) {
+                        handleNetworkRequestError();
                     }
                 }
         );
@@ -118,6 +144,17 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         mDrawerLayout.addDrawerListener(mDrawerToggle);
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    }
+
+    protected boolean isNeedToBeRestored(@Nullable Bundle savedInstanceState){
+        boolean needToRestore = true;
+        if(savedInstanceState == null){
+            needToRestore = false;
+        }
+        else{
+            needToRestore = !savedInstanceState.getBoolean(NOT_RESTORE_APPLICATION_STATE, false);
+        }
+        return needToRestore;
     }
 
     //восстановить состояние активности
@@ -191,10 +228,13 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
+        outState.putBoolean(NOT_RESTORE_APPLICATION_STATE, mNotStoreApplicationState);
+        if(mNotStoreApplicationState) return;
         String jsonString = FlickrFetchr.getLastSearchedJsonString();
         outState.putString(LAST_JSON_STRING, jsonString);
         outState.putInt(CURRENT_PAGE, mCurrentPage);
         outState.putInt(PAGES_AMOUNT, mPagesAmount);
+
 
         ArrayList<String> fragmentKeys = new ArrayList<>();
         String fragmentKey;
@@ -221,6 +261,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     //получить фрагмент, соответствующий выбранной позиции
     @Override
     protected Fragment getPageFragment(int position) {
+        Log.i(TAG, "getPageFragment("+position+") called.");
         PhotoGalleryFragment fragment;
         int pageToSet = position+1;
 
@@ -232,7 +273,7 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
     //вернуть общее количество страниц
     @Override
     protected int getPagesAmount() {
-        return mPagesAmount;
+        return mPagesAmount==0 ? 1 : mPagesAmount;
     }
 
     //---------------------------------CALLBACKS--------------------------------------------------//
@@ -243,12 +284,22 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
         new FetchItemTask(query).execute();//обновить
     }
 
+    @Override
+    public void handleError(int errorId) {
+        switch(errorId){
+            case PhotoGalleryFragment.NETWORK_ERROR_ID:
+                handleNetworkRequestError();
+                break;
+            default:
+                break;
+        }
+    }
 
     //обработка события выбора новой страницы
     @Override
     protected void onPageSelectedAction(int position) {
-        mThumbnailDownloader.clearQueue();
-        Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " queue cleared");
+//        mThumbnailDownloader.clearQueue();
+//        Log.i(TAG, "Background thread " + mThumbnailDownloader.getId() + " queue cleared");
     }
 
     //запустить задачу по загрузке и обновлению моделей
@@ -265,11 +316,19 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
 
         @Override
         protected FlickrSearchResult doInBackground(Void... params) {
-            if(mQuery == null){
-                return new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
-            } else{
-                return new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
+            FlickrSearchResult result = null;
+            try {
+                if (mQuery == null) {
+                    result = new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
+                } else {
+                    result = new FlickrFetchr().searchPhotosInPage(mQuery, mCurrentPage);
+                }
             }
+            catch(Exception e){
+                handleNetworkRequestError();
+                result = null;
+            }
+            return result;
         }
 
         @Override
@@ -278,5 +337,70 @@ public class PhotoGalleryActivity extends ViewPagerActivity /*SingleFragmentActi
             mItems = result.getGalleryItems();
             loadAdapter();
         }
+    }
+
+    Observable<FlickrSearchResult> myObservable = Observable.create(subscriber -> {
+                FlickrSearchResult result = null;
+                String query = QueryPreferences.getStoredQuery(this);
+                if(query == null){
+                    result = new FlickrFetchr().fetchRecentPhotosFromPage(mCurrentPage);
+                } else{
+                    result = new FlickrFetchr().searchPhotosInPage(query, mCurrentPage);
+                }
+                subscriber.onNext(result);
+                Log.i(TAG, "subscriber.onNext(result) called in Thread:" +
+                        Thread.currentThread().getId() +
+                        "\nfor query: \"" + query + "\"");
+    });
+
+    void showPhotoPages(FlickrSearchResult result){
+        mPagesAmount = result.getPagesAmount();
+        mItems = result.getGalleryItems();
+        loadAdapter();
+        Log.i(TAG, "showPhotoPages(result) called in Thread:" + Thread.currentThread().getId());
+    }
+
+    static int sDbguDialogCalledCounter = 0;
+    void handleNetworkRequestError(){
+        AlertDialog alert = getCreatedAlert();
+        alert.show();
+    }
+
+
+    AlertDialog mAlert;
+    private AlertDialog getCreatedAlert(){
+        if(mAlert == null){
+            sDbguDialogCalledCounter++;
+            AlertDialog.Builder builder = new AlertDialog.Builder(PhotoGalleryActivity.this);
+            mNotStoreApplicationState = true;
+            builder.setTitle("NETWORK FAIL!")
+                    .setMessage(NETWORK_REQUEST_ERRROR_MESSAGE+" (activity) "+ sDbguDialogCalledCounter)
+                    .setCancelable(false)
+                    .setPositiveButton("RETRY",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+//                                recreate();
+                                    finish();
+                                    startActivity(getIntent());
+
+                                }
+                            })
+                    .setNegativeButton("QUITE",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                        finishAndRemoveTask();
+                                    }
+                                    else{
+                                        finish();
+//                                    System.exit(0);
+                                    }
+                                    dialog.cancel();
+                                }
+                            });
+            mAlert = builder.create();
+        }
+        return mAlert;
     }
 }
