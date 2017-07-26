@@ -5,14 +5,11 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.example.dima.photogallery.Activities.PhotoGallery.GalleryItem;
-//import com.google.common.io.Closer;
-import com.google.common.io.Closer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -144,15 +141,16 @@ public class FlickrFetchr {
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();//подключиться к
         //+ ресурсу, указанному в URL
-        connection.setConnectTimeout(1000);
-        connection.setReadTimeout(1000);
         try{
+            connection.setConnectTimeout(1000);
+            connection.setReadTimeout(1000);
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new IOException(connection.getResponseMessage() + ": with " + urlSpec);
             }
             InputStream in = connection.getInputStream();
             if(in == null){
-                throw new IOException(connection.getResponseMessage() + ": getInputStream() for " + urlSpec);
+                throw new IOException(connection.getResponseMessage() +
+                                        ": getInputStream() for " + urlSpec);
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             int bytesRead = 0;

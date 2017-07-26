@@ -49,8 +49,6 @@ public class PhotoPageFragment extends VisibleFragment {
         View view = inflater.inflate(R.layout.fragment_photo_page, container, false);
         mProgressBar = (ProgressBar) view.findViewById(R.id.fragment_photo_page_progress_bar);
         mProgressBar.setMax(100);
-
-
         mWebView = (WebView) view.findViewById(R.id.fragment_photo_page_web_view);
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.setWebChromeClient(new WebChromeClient(){
@@ -70,6 +68,7 @@ public class PhotoPageFragment extends VisibleFragment {
                 activity.getSupportActionBar().setSubtitle(title);
             }
         });
+        //разрешить загрузку и обработку данных с URL-адреса
         mWebView.setWebViewClient(new WebViewClient(){
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {

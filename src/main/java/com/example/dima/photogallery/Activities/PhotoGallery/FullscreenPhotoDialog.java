@@ -8,7 +8,6 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -56,9 +55,6 @@ public class FullscreenPhotoDialog extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-//        Dialog dialog = super.onCreateDialog(savedInstanceState);
-
-//        Dialog dialog = new Dialog(getActivity(),android.R.style.Theme_Translucent_NoTitleBar);
         Dialog dialog = new Dialog(getActivity(),android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         final View view = getActivity().getLayoutInflater().inflate(R.layout.dialog_fullscreen_photo, null);
         final Drawable d = new ColorDrawable(Color.BLACK);
@@ -70,27 +66,6 @@ public class FullscreenPhotoDialog extends DialogFragment {
         params.height = WindowManager.LayoutParams.MATCH_PARENT;
         params.gravity = Gravity.CENTER;
         dialog.setCanceledOnTouchOutside(true);
-
-//        int orientation;
-//        int screenWidth;
-//        int screenHeight;
-//        DisplayMetrics displayMetrics = new DisplayMetrics();
-//        WindowManager windowManager  =  (WindowManager) getContext().
-//                getApplicationContext().
-//                getSystemService(Context.WINDOW_SERVICE);
-//        windowManager.getDefaultDisplay().getMetrics(displayMetrics);
-//        screenWidth = displayMetrics.widthPixels;
-//        screenHeight = displayMetrics.heightPixels;
-//        orientation = getContext().getResources().getConfiguration().orientation;
-//        if(orientation == Configuration.ORIENTATION_LANDSCAPE){
-//            params.width = screenHeight*75/100;
-//            params.height = screenWidth*75/100;
-//        }
-//        else{
-//            params.width = screenWidth*75/100;
-//            params.height = screenHeight*75/100;
-//        }
-
         return dialog;
     }
 
@@ -100,18 +75,20 @@ public class FullscreenPhotoDialog extends DialogFragment {
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState)
     {
-
         View view = inflater.inflate(R.layout.dialog_fullscreen_photo, null);
-
         mParentContext = inflater.getContext();
+        initializeButtons(view);
+        setPhotoParameters(savedInstanceState);
+        setPhotoTitle(view);
+        setPhotoImage(inflater, view, savedInstanceState);
+        Log.i(TAG, "FullscreenPhotoDialog view created");
+        return view;
+    }
 
+    private void initializeButtons(View view){
         ImageButton btnSavePhoto = (ImageButton) view.findViewById(R.id.btn_save_photo);
         ImageButton btnToPhotoWebSource = (ImageButton) view.findViewById(R.id.btn_go_to_photo_web_source);
         ImageButton btnCloseDialog = (ImageButton) view.findViewById(R.id.btn_close_fullscreen_photo_dialog);
-
-//        btnCloseDialog.setOnClickListener(v -> dismiss());
-//        btnToPhotoWebSource.setOnClickListener(v -> goToWebSource());
-//        btnSavePhoto.setOnClickListener(v -> savePhoto());
 
         btnCloseDialog.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -131,46 +108,30 @@ public class FullscreenPhotoDialog extends DialogFragment {
                 savePhoto();
             }
         });
+    }
 
-
+    private void setPhotoParameters(Bundle savedInstanceState){
         if(savedInstanceState == null){
             mTitle = mGalleryItem.getCaption();
-            mAuthor = mGalleryItem.getOwner();
             mPhotoUrl = mGalleryItem.getUrl();
             mPhotoSourceUri = mGalleryItem.getPhotoPageUri();
         }
         else{
             mTitle = savedInstanceState.getParcelable("FullscreenPhotoDialog_Title");
-            mAuthor = savedInstanceState.getString("FullscreenPhotoDialog_Author");
             mPhotoUrl = savedInstanceState.getString("FullscreenPhotoDialog_Url");
             mPhotoSourceUri = savedInstanceState.getParcelable("FullscreenPhotoDialog_Uri");
         }
+    }
 
+    private void setPhotoTitle(View view) {
         EditText etTitle = (EditText) view.findViewById(R.id.et_photo_title);
         etTitle.setText("TITLE: "+mTitle);
-        EditText etAuthor = (EditText) view.findViewById(R.id.et_photo_author);
-        etAuthor.setText("AUTHOR: "+mAuthor);
+    }
+
+    private void setPhotoImage(LayoutInflater inflater, View view, Bundle savedInstanceState) {
         ImageView photoImageView = (ImageView) view.findViewById(R.id.image_view_fullscreen_photo);
         photoImageView.setDrawingCacheEnabled(true);
-        final Target myTarget = new Target() {
-            @Override
-            public void onBitmapLoaded (final Bitmap bitmap, Picasso.LoadedFrom from){
-                //Set it in the ImageView
-                photoImageView.setImageBitmap(bitmap);
-                mImage = bitmap;
-                view.invalidate();
-                mMyTarget = this;
-                Log.i(TAG, "onBitmapLoaded()");
-            }
-
-            @Override
-            public void onPrepareLoad(Drawable placeHolderDrawable) {}
-
-            @Override
-            public void onBitmapFailed(Drawable errorDrawable) {
-                Log.i(TAG, "onBitmapFailed()");
-            }
-        };
+        Target myTarget = new PhotoDialogTarget(view, photoImageView);
         if(savedInstanceState == null){
             Picasso.with(inflater.getContext()).setLoggingEnabled(true);
             Picasso.with(inflater.getContext()).
@@ -183,15 +144,12 @@ public class FullscreenPhotoDialog extends DialogFragment {
             photoImageView.setImageBitmap(mImage);
             Log.i(TAG, "Image restored");
         }
-        Log.i(TAG, "FullscreenPhotoDialog view created");
-        return view;
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         outState.putParcelable("FullscreenPhotoDialog_Image", mImage);
         outState.putString("FullscreenPhotoDialog_Title", mTitle);
-        outState.putString("FullscreenPhotoDialog_Author", mAuthor);
         outState.putParcelable("FullscreenPhotoDialog_Uri", mPhotoSourceUri);
         outState.putString("FullscreenPhotoDialog_Url", mPhotoUrl);
         super.onSaveInstanceState(outState);
@@ -220,16 +178,50 @@ public class FullscreenPhotoDialog extends DialogFragment {
     }
 
     private void savePhoto(){
-//        Toast.makeText(mParentContext, "MAYBE LATER...", Toast.LENGTH_SHORT).show();
         if(mSavedImagePath == "") {
-//            saveToInternalStorage();
             saveToGallery();
             Toast.makeText(mParentContext, "SAVED IN GALLERY", Toast.LENGTH_LONG).show();
         }
         else{
             Toast.makeText(mParentContext, "ALREADY SAVED", Toast.LENGTH_LONG).show();
         }
-//        Toast.makeText(mParentContext, "Saved in "+mSavedImagePath, Toast.LENGTH_LONG).show();
+    }
+
+    private void saveToGallery(){
+        ContentResolver resolver = mParentContext.getContentResolver();
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis());
+        MediaStore.Images.Media.insertImage(resolver, mImage, mTitle , "Author: " + mAuthor);
+    }
+
+    private class PhotoDialogTarget implements Target{
+
+        private View mParentView;
+        private ImageView mImageView;
+
+        public PhotoDialogTarget(View view, ImageView imageView){
+            mParentView = view;
+            mImageView = imageView;
+        }
+
+        @Override
+        public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+            mImageView.setImageBitmap(bitmap);
+            mImage = bitmap;
+            mParentView.invalidate();
+            mMyTarget = this;
+            Log.i(TAG, "onBitmapLoaded()");
+        }
+
+        @Override
+        public void onBitmapFailed(Drawable errorDrawable) {
+            Log.i(TAG, "onBitmapFailed()");
+        }
+
+        @Override
+        public void onPrepareLoad(Drawable placeHolderDrawable) {
+
+        }
     }
 
     private void saveToInternalStorage(){
@@ -238,7 +230,6 @@ public class FullscreenPhotoDialog extends DialogFragment {
         File directory = cw.getDir("savedPhotos", Context.MODE_PRIVATE);
         // Create imageDir
         File mypath=new File(directory,"profile.jpg");
-
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(mypath);
@@ -253,21 +244,6 @@ public class FullscreenPhotoDialog extends DialogFragment {
                 e.printStackTrace();
             }
             mSavedImagePath = directory.getAbsolutePath();
-//            return directory.getAbsolutePath();
         }
-    }
-
-
-
-    private void saveToGallery(){
-        ContentResolver resolver = mParentContext.getContentResolver();
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis());
-//        resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-        MediaStore.Images.Media.insertImage(resolver, mImage, mTitle , "Author: " + mAuthor);
-    }
-
-    private void saveToExternalStorage(){
-
     }
 }

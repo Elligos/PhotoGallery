@@ -2,15 +2,10 @@ package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
@@ -27,7 +22,6 @@ import android.view.WindowManager;
 import com.example.dima.photogallery.Activities.Settings.SettingsActivity;
 import com.example.dima.photogallery.Settings.PhotoGallerySettings;
 import com.example.dima.photogallery.Web.FlickrFetchr;
-import com.example.dima.photogallery.Services.PollService;
 import com.example.dima.photogallery.Services.QueryPreferences;
 import com.example.dima.photogallery.R;
 import com.example.dima.photogallery.Web.FlickrSearchResult;
@@ -48,21 +42,20 @@ public class PhotoGalleryFragment extends VisibleFragment
 {
     private static final String TAG = "PhotoGalleryFragment";
     private static final int SETTINGS_ACTIVITY_REQUEST_CODE = 0x77;
-
+    public static final int NETWORK_ERROR_ID = 1;
     private int mSpanCount = 2;//количество столбцов
     private int mImageHeight;
     private RecyclerView mPhotoRecyclerView;
     private RecyclerViewPhotoAdapter mAdapter;
-    private List<GalleryItem> mItems;// = new ArrayList<>();//список моделей, описывающих фотографии
-    private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с сайта Flickr
-    PhotoGallerySettings mSettings;//настройки приложения
-
+    private List<GalleryItem> mItems;//список моделей, описывающих фотографии
+    private ThumbnailDownloader<PhotoHolder> mThumbnailDownloader;//загрузчик фотографий с
+                                                    //+ сайта Flickr
+    private PhotoGallerySettings mSettings;//настройки приложения
     private int mCurrentPage = -1;//выбранная страница с фотографиями, которую отображает фрагмент
     private int mPagesAmount = 1;//общее количество страниц с фотографиями
     private Callbacks mCallbacks;//интерфейс обратного вызова
     private String mQuery;
 
-    public static final int NETWORK_ERROR_ID = 1;
 
     public interface Callbacks{
         void reloadPages();
@@ -102,13 +95,15 @@ public class PhotoGalleryFragment extends VisibleFragment
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);//зарегистрировать фрагмент для получения обратных вызовов меню
                         //+ (фрагмент должен получить вызов onCreateOptionsMenu(…))
-        Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") created.");
+        Log.i(TAG, "Photo gallery fragment: " + this.getTag() +
+                   " (page  " + mCurrentPage + ") created.");
         mSettings = PhotoGallerySettings.getPhotoGallerySettings(getContext());
         mSpanCount = mSettings.getAmountOfPhotosInRow();
 
         mImageHeight = calculateImageHeight();
     }
 
+    //рассчитать размеры выводимого изображения, исходя из количества столбцов и размеров устройства
     private int calculateImageHeight(){
         int orientation;
         int screenWidth;
@@ -136,7 +131,8 @@ public class PhotoGalleryFragment extends VisibleFragment
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.i(TAG, "Photo gallery fragment: " + this.getTag() + " (page  " + mCurrentPage + ") destroyed.");
+        Log.i(TAG, "Photo gallery fragment: " + this.getTag() +
+                   " (page  " + mCurrentPage + ") destroyed.");
     }
 
     @Nullable
@@ -145,18 +141,16 @@ public class PhotoGalleryFragment extends VisibleFragment
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState)
     {
-
-
-
         View view = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
-        mPhotoRecyclerView = (RecyclerView) view.findViewById(R.id.fragment_photo_gallery_recycler_view);
+        mPhotoRecyclerView =
+                (RecyclerView) view.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), mSpanCount));
-//        new FetchItemTask().execute();//обновить
         myObservable
                 .subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(result -> startPhotoLoading(result), v -> handleNetworkRequestError());
-        Log.i(TAG, "Photo gallery fragment view: " + this.getTag() + " (page " + mCurrentPage + ") created.");
+        Log.i(TAG, "Photo gallery fragment view: " + this.getTag() +
+                   " (page " + mCurrentPage + ") created.");
         return view;
     }
 
@@ -206,7 +200,8 @@ public class PhotoGalleryFragment extends VisibleFragment
                 searchView.setQuery(query, false);
             }
         });
-        Log.i(TAG, "Photo gallery fragment OptionsMenu: " + this.getTag() + " (page " + mCurrentPage + ") created.");
+        Log.i(TAG, "Photo gallery fragment OptionsMenu: " + this.getTag() +
+                   " (page " + mCurrentPage + ") created.");
     }
 
 
@@ -251,11 +246,34 @@ public class PhotoGalleryFragment extends VisibleFragment
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    //обновить модели
-//    public void updateItems(){
-//        Log.i(TAG, "updateItems() in page " + mCurrentPage + ") called.");
-//        new FetchItemTask().execute();//обновить
-//    }
+    Observable<FlickrSearchResult> myObservable = Observable.create(subscriber -> {
+        FlickrFetchr fetcher = new FlickrFetchr();
+        FlickrSearchResult result = null;
+        int photosPerPage = mSettings.getAmountOfPhotosInPage();
+        fetcher.setPhotosPerPageAmount(photosPerPage);
+        if(mQuery == null){
+            result = fetcher.fetchRecentPhotosFromPage(mCurrentPage);//загрузить модели,
+                                    //+ соответствующие последним добавленным фотографиям.
+        } else{
+            result = fetcher.searchPhotosInPage(mQuery, mCurrentPage);//загрузить модели,
+                                    //+ соответствующие запросу.
+        }
+        subscriber.onNext(result);
+        Log.i(TAG, "subscriber.onNext(result) called in page:" + mCurrentPage);
+    });
+
+    protected void startPhotoLoading(FlickrSearchResult result){
+        mPagesAmount = result.getPagesAmount();
+        mItems = result.getGalleryItems();
+        mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader, mImageHeight);
+        mPhotoRecyclerView.setAdapter(mAdapter);
+        Log.i(TAG, "startPhotoLoading(result) called in page:" + mCurrentPage);
+    }
+
+    void handleNetworkRequestError(){
+        mCallbacks.handleError(NETWORK_ERROR_ID);
+    }
+
 
     //получить загрузчик фотографий
     public ThumbnailDownloader<PhotoHolder> getThumbnailDownloader() {
@@ -297,63 +315,5 @@ public class PhotoGalleryFragment extends VisibleFragment
 
     public void setSettings(PhotoGallerySettings settings) {
         mSettings = settings;
-    }
-
-//    //запустить задачу по загрузке и обновлению моделей
-//    //+ Если поисковый запрос задан, будут загружены модели, соответствующие запросу.
-//    //+ Если поисковый запрос не задан, будут загружены модели, соответствующие последним добавленным
-//    //+ фотографиям.
-//    private class FetchItemTask extends AsyncTask<Void, Void, FlickrSearchResult> {
-//        private static final String TAG = "PhotoGalleryFragment";
-//
-//        public FetchItemTask(){
-//        }
-//
-//        @Override
-//        protected FlickrSearchResult doInBackground(Void... params) {
-//            FlickrFetchr fetcher = new FlickrFetchr();
-//            int photosPerPage = mSettings.getAmountOfPhotosInPage();
-//            fetcher.setPhotosPerPageAmount(photosPerPage);
-//            if(mQuery == null){
-//                return fetcher.fetchRecentPhotosFromPage(mCurrentPage);
-//            } else{
-//                return fetcher.searchPhotosInPage(mQuery, mCurrentPage);
-//            }
-//        }
-//
-//        @Override
-//        protected void onPostExecute(FlickrSearchResult result) {
-//            Log.i(TAG, "onPostExecute() (page  " + mCurrentPage + ") called.");
-//            mPagesAmount = result.getPagesAmount();
-//            mItems = result.getGalleryItems();
-//            mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader, mImageHeight);
-//            mPhotoRecyclerView.setAdapter(mAdapter);
-//        }
-//    }
-
-    Observable<FlickrSearchResult> myObservable = Observable.create(subscriber -> {
-        FlickrFetchr fetcher = new FlickrFetchr();
-        FlickrSearchResult result = null;
-        int photosPerPage = mSettings.getAmountOfPhotosInPage();
-        fetcher.setPhotosPerPageAmount(photosPerPage);
-        if(mQuery == null){
-            result = fetcher.fetchRecentPhotosFromPage(mCurrentPage);
-        } else{
-            result = fetcher.searchPhotosInPage(mQuery, mCurrentPage);
-        }
-        subscriber.onNext(result);
-        Log.i(TAG, "subscriber.onNext(result) called in page:" + mCurrentPage);
-    });
-
-    protected void startPhotoLoading(FlickrSearchResult result){
-        mPagesAmount = result.getPagesAmount();
-        mItems = result.getGalleryItems();
-        mAdapter = new RecyclerViewPhotoAdapter(mItems, mThumbnailDownloader, mImageHeight);
-        mPhotoRecyclerView.setAdapter(mAdapter);
-        Log.i(TAG, "startPhotoLoading(result) called in page:" + mCurrentPage);
-    }
-
-    void handleNetworkRequestError(){
-        mCallbacks.handleError(NETWORK_ERROR_ID);
     }
 }

@@ -1,8 +1,6 @@
 package com.example.dima.photogallery.Activities.PhotoGallery;
 
 import android.content.Context;
-import android.content.Intent;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.support.v4.app.FragmentActivity;
 import android.support.v7.widget.RecyclerView;
@@ -11,12 +9,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-
-import com.example.dima.photogallery.Activities.PhotoPage.PhotoPageActivity;
 import com.example.dima.photogallery.R;
 import com.example.dima.photogallery.Web.ThumbnailDownloader;
-
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 
 import java.util.List;

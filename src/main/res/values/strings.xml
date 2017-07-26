@@ -16,4 +16,9 @@
     <string name="menu_settings_string">Settings</string>
     <string name="open_drawer">Open drawer</string>
     <string name="close_drawer">Close drawer</string>
+    <string name="fullscreen_photo_image_description"> Fullscreen photo dialog transparent image</string>
+    <string name="fullscreen_photo_close_btn_description">Fullscreen photo dialog close button image</string>
+    <string name="fullscreen_photo_save_image_btn_description">Fullscreen photo dialog save photo button image</string>
+    <string name="fullscreen_photo_go_to_web_btn_description">Fullscreen photo dialog go to web button image</string>
+
 </resources>

@@ -53,7 +53,10 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             public void handleMessage(Message msg) {
                 if (msg.what == MESSAGE_DOWNLOAD) {
                     T target = (T) msg.obj;
-                    Log.i(TAG, "Thread "+ getId() + " got a request for URL: " + mRequestMap.get(target).replaceFirst("https://farm5.staticflickr.com/",""));
+                    String endOfUrlString = mRequestMap.
+                                            get(target).
+                                            replaceFirst("https://farm5.staticflickr.com/", "");
+                    Log.i(TAG, "Thread "+ getId() + " got a request for URL: " + endOfUrlString);
                     handleRequest(target);
                 }
             }
@@ -69,7 +72,8 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                 return;
             }
             byte[] bitmapBytes = new FlickrFetchr().getUrlBytes(url);
-            final Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+            final Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes,
+                                                                0, bitmapBytes.length);
             Log.i(TAG, "Bitmap created");
             mResponseHandler.post(new Runnable() {
                 @Override
@@ -80,7 +84,8 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                     }
 
                     mRequestMap.remove(target);
-                    Log.i(TAG, "thumbnail downloaded for URL: " + url.replaceFirst("https://farm5.staticflickr.com/",""));
+                    Log.i(TAG, "thumbnail downloaded for URL: " +
+                                url.replaceFirst("https://farm5.staticflickr.com/",""));
                     mThumbnailDownloadListener.onThumbnailDownloaded(target, bitmap);
                 }
             });

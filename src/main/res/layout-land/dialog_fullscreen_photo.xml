@@ -25,21 +25,11 @@
             android:textColor="@android:color/background_light"
             android:textSize="30sp"/>
 
-        <EditText
-            android:id="@+id/et_photo_author"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="0.5"
-            android:background="@android:color/transparent"
-            android:editable="false"
-            android:ems="10"
-            android:singleLine="true"
-            android:text="Author:"
-            android:textColor="@android:color/background_light"
-            android:textSize="24sp"/>
+
 
         <ImageView
             android:id="@+id/image_view_fullscreen_photo"
+            android:contentDescription="@string/fullscreen_photo_image_description"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="5"
@@ -55,6 +45,7 @@
 
         <ImageButton
             android:id="@+id/btn_close_fullscreen_photo_dialog"
+            android:contentDescription="@string/fullscreen_photo_close_btn_description"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -63,6 +54,7 @@
 
         <ImageButton
             android:id="@+id/btn_go_to_photo_web_source"
+            android:contentDescription="@string/fullscreen_photo_go_to_web_btn_description"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -72,6 +64,7 @@
 
         <ImageButton
             android:id="@+id/btn_save_photo"
+            android:contentDescription="@string/fullscreen_photo_save_image_btn_description"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
